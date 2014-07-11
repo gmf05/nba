@@ -1,10 +1,9 @@
 import urllib2
 import json
-import elementtree.ElementTree as ET
+# import elementtree.ElementTree as ET
 import scipy.io as spio
 import numpy as np
 
-# urlroot = "http://api.sportsdatabase.com/nba/query.json?sdql="
 API_KEY = "YOUR_API_KEY"
 features=["date", "team", "o:team"]
 sqdl="date,team,o:team,points,margin,margin after the first, margin at the half, margin after the third,biggest lead,field goals attempted, field goals made, three pointers attempted, three pointers made, free throws attempted, free throws made,points in the paint,assists,steals,blocks,offensive rebounds,defensive rebounds,turnovers@season=YYYY and game number=NNNN"
@@ -22,13 +21,14 @@ def getSeason(yyyy):
     url = urlroot.replace("NNNN", str(g)) 
     F = urllib2.urlopen(url)
     J = F.read()    
-    J = J.replace("json_callback(","")
-    J = J.replace("});","}")  
-    J = J.replace("\'", "\"") # seems to use " instead of '
+    F.close()
+    J = J.replace("json_callback(","") # removing junk text
+    J = J.replace("});","}") # removing junk text
+    J = J.replace("\'", "\"") # switching to double quotes throughout
     J0 = json.loads(J)
     features = J0['headers']
     data = J0['groups'][0]['columns']
-    F.close()
+    games.append(data)
 
 #     N = len(data[0])
 #     # loop over each game, add data to list
@@ -50,7 +50,7 @@ def getSeason(yyyy):
 #         'Win': wins, 
 #         'Points': pts
 #         })
-  return games
+  return games,features
 
 if __name__ == "__main__":
   season = 2013
