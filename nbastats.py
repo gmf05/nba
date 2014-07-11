@@ -4,25 +4,34 @@ import elementtree.ElementTree as ET
 import scipy.io as spio
 import numpy as np
 
-urlroot = "http://api.sportsdatabase.com/nba/query.json?sdql="
+# urlroot = "http://api.sportsdatabase.com/nba/query.json?sdql="
 API_KEY = "YOUR_API_KEY"
-teams = ["Bobcats", "Bucks", "Bulls", "Cavaliers", "Celtics", "Clippers", "Grizzlies", "Hawks", "Heat", "Pelicans", "Jazz", "Kings", "Knicks", "Lakers", "Magic", "Mavericks", "Nets", "Nuggets", "Pacers", "Pistons", "Raptors", "Rockets", "Seventysixers", "Spurs", "Suns", "Supersonics", "Thunder", "Timberwolves", "Trailblazers", "Warriors", "Wizards"]
+features=["date", "team", "o:team"]
+sqdl="date,team,o:team,points,margin,margin after the first, margin at the half, margin after the third,biggest lead,field goals attempted, field goals made, three pointers attempted, three pointers made, free throws attempted, free throws made,points in the paint,assists,steals,blocks,offensive rebounds,defensive rebounds,turnovers@season=YYYY and game number=NNNN"
+# sqdl = "date,team,o:team@season=YYYY and game number=NNNN" # simple features
+
+
+sqdl_html = sqdl.replace(",","%2C").replace(":", "%3A").replace(" ", "+").replace("=","%3D").replace("@","%40")
+# urlroot = "http://api.sportsdatabase.com/nba/query.json?sdql=date%2Cteam%2Co%3Ateam%40season%3DYYYY+and+game+number%3DNNNN&output=json&api_key=" + API_KEY
+urlroot = "http://api.sportsdatabase.com/nba/query.json?sdql=" + sqdl_html + "&output=json&api_key=" + API_KEY
 
 def getSeason(yyyy):
-  sdql = "season=" + str(yyyy)  
-  stats = []
-  
-  for team in teams:
-    print team 
-    url = urlroot + team + ":" + sdql.replace("=","%3D") + "&output=json&api_key=" + API_KEY
-    try:
-      f = urllib2.urlopen(url)
-      jsonp = f.read()
-      jsonp = jsonp.replace("json_callback(","")
-      jsonp = jsonp.replace("});","")
-      f.close()
-#       json_parsed = json.loads(json_str)
-#       for game_str in json_parsed.get('games', []):
+  games = []
+  urlroot = urlroot.replace("YYYY", str(yyyy))
+  for g in range(3):      
+    url = urlroot.replace("NNNN", str(g)) 
+    F = urllib2.urlopen(url)
+    J = F.read()    
+    J = J.replace("json_callback(","")
+    J = J.replace("});","}")  
+    J = J.replace("\'", "\"") # seems to use " instead of '
+    J0 = json.loads(J)
+    features = J0['headers']
+    data = J0['groups'][0]['columns']
+    F.close()
+
+#     N = len(data[0])
+#     # loop over each game, add data to list
 #         game_tree = ET.XML(game_str)
 #       
 #      games.append({
@@ -36,22 +45,15 @@ def getSeason(yyyy):
 #        'clock': gamestate_tree.get('display_status1'),
 #        'clock-section': gamestate_tree.get('display_status2')
 #      })
-
-#     get list of games
-#     from each game, get features of interest
-      wins = 1
-      pts = 100
-      stats.append({
-        'Win': wins, 
-        'Points': pts
-        })
-    except Exception, e:
-      print e
-  
-  return stats 
+      # for loop:
+#       games.append({
+#         'Win': wins, 
+#         'Points': pts
+#         })
+  return games
 
 if __name__ == "__main__":
   season = 2013
-  S = getSeason(season)
-  D = {"stats": S, "teams", teams}
+  G = getSeason(season)
+  D = {"games": G}
   spio.matlab.savemat('NBASeason' + str(season), D)
