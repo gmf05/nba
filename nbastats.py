@@ -57,4 +57,4 @@ if __name__ == "__main__":
   yyyy = sys.argv[1]
 #   csvSeason(yyyy) # works
 #   xlsSeason(yyyy) # doesn't work
-  matSeason(yyyy) # doesn't work
+  matSeason(yyyy) # works
