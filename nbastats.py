@@ -40,8 +40,8 @@ def csvSeason(yyyy):
     csvfile.close()
 
 if __name__ == "__main__":
-  yyyy = sys.argv[1]
-  (G,F) = getSeason(yyyy)
-  D = {"games":G, "features":F}
-  spio.matlab.savemat('NBASeason' + str(season), D)
-#   csvSeason(yyyy)
+#   yyyy = sys.argv[1]
+#   (G,F) = getSeason(yyyy)
+#   D = {"games":G, "features":F}
+#   spio.matlab.savemat('NBASeason' + str(season), D)
+  csvSeason(yyyy)
