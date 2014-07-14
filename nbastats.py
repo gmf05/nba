@@ -39,9 +39,22 @@ def csvSeason(yyyy):
       csvWriter.writerow(g)
     csvfile.close()
 
+def matSeason(yyyy):
+  games =  numpy.asarray(getSeason(yyyy))
+  D = {"games":games, "features":features}
+  spio.matlab.savemat('NBASeason' + str(yyyy) + '.mat', D)
+
+def xlsSeason(yyyy):
+  games = getSeason(yyyy)
+  with open('NBASeason' + str(yyyy) + '.xls','w') as csvfile:
+    csvWriter = csv.writer(csvfile,dialect=csv.excel_tab)
+    csvWriter.writerow(features)
+    for g in games:
+      csvWriter.writerow(g)
+    csvfile.close()
+
 if __name__ == "__main__":
-#   yyyy = sys.argv[1]
-#   (G,F) = getSeason(yyyy)
-#   D = {"games":G, "features":F}
-#   spio.matlab.savemat('NBASeason' + str(season), D)
-  csvSeason(yyyy)
+  yyyy = sys.argv[1]
+#   csvSeason(yyyy) # works
+#   xlsSeason(yyyy) # doesn't work
+  matSeason(yyyy) # doesn't work
