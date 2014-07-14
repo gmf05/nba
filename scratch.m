@@ -29,16 +29,33 @@ save(fname2, 'Ngames', 'features', 'dates', 'teams', 'stats');
 % get a team's games
 % teamList = cell2str(teams(:,1));
 team = 'Heat';
-ind = []; for i = 1:size(teams,1), if isequal(teams{i,1},team), ind(end+1) = i; end; end
+gameind = []; for i = 1:size(teams,1), if isequal(teams{i,1},team), gameind(end+1) = i; end; end
 
 % create a point process of team wins
-Ngames = length(ind); % number of games played (regular season + playoffs)
+Ngames = length(gameind); % number of games played (regular season + playoffs)
 dn = zeros(1,Ngames);
 for n = 1:Ngames
-  if stats(ind(n),2)>0
+  if stats(gameind(n),2)>0
     dn(n) = 1;
   end
 end
 d = pp_data(dn);
 
-% 
+% does a lead after 3 qtrs improve win probability?
+% one example (2012 Heat):
+% yes (p=0.017) baseline prob. ~49% -> ~93% with a lead
+ftind = [5];
+Nfts = length(ftind);
+S = stats(gameind,ftind);
+Y = d.dn';
+X = zeros(Ngames, Nfts+1);
+X(:,1) = 1;
+i=1;
+X(:,i+1) = S(:,i)>0; i=i+1;
+% [b,dev,st] = glmfit(X, Y,'poisson','constant','off');
+
+% more specifically,
+% baseline probability of 66% goes up/down 2% per point the team leads/trails
+% at end of 3rd quarter
+
+
