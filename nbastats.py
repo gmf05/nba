@@ -40,7 +40,7 @@ def csvSeason(yyyy):
     csvfile.close()
 
 def matSeason(yyyy):
-  games =  numpy.asarray(getSeason(yyyy))
+  games =  numpy.asarray(getSeason(yyyy),dtype=numpy.object)
   D = {"games":games, "features":features}
   spio.matlab.savemat('NBASeason' + str(yyyy) + '.mat', D)
 
