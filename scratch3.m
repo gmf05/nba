@@ -29,8 +29,6 @@ save(fname2, 'Ngames', 'features', 'dates', 'teams', 'stats');
 % get a team's games
 % teamList = cell2str(teams(:,1));
 team = 'Heat';
-<<<<<<< HEAD
-=======
 % team = 'Bucks';
 
 >>>>>>> Misc changes
@@ -68,9 +66,6 @@ X(:,i+1) = S(:,i)>0; i=i+1;
 % at end of 3rd quarter
 
 
-<<<<<<< HEAD
-=======
-
 %%
 
 % 
@@ -79,4 +74,3 @@ p = p.add_covar('rate',0,[0 1],'indicator');
 % p = p.add_covar('self-history',1,[1 5 10],'spline');
 m = pp_model();
 m = m.fit(d,p);
->>>>>>> Misc changes
