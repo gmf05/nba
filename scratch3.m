@@ -31,7 +31,6 @@ save(fname2, 'Ngames', 'features', 'dates', 'teams', 'stats');
 team = 'Heat';
 % team = 'Bucks';
 
->>>>>>> Misc changes
 gameind = []; for i = 1:size(teams,1), if isequal(teams{i,1},team), gameind(end+1) = i; end; end
 
 % create a point process of team wins
@@ -56,10 +55,7 @@ X(:,1) = 1;
 i=1;
 X(:,i+1) = S(:,i)>0; i=i+1;
 % [b,dev,st] = glmfit(X, Y,'poisson','constant','off');
-<<<<<<< HEAD
-=======
 [b,dev,st] = glmfit(X, Y,'binomial','constant','off');
->>>>>>> Misc changes
 
 % more specifically,
 % baseline probability of 66% goes up/down 2% per point the team leads/trails

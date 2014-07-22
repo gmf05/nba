@@ -3,8 +3,27 @@ import re
 import numpy
 import urllib2
 
-def parseTR(trHTML,teams,qtr):
+def timeRemaining(timeStr,qtr):
   qstart = [36, 24, 12, 0, -5, -10, -15, -20]
+  tmin = qstart[qtr] + int(timeStr[0:2])
+  tsign = numpy.sign(tmin)
+
+  if tsign>=0:    
+    tsec = float(timeStr[3::])
+  else:
+    tmin = tmin+1
+    tsec = 60-float(timeStr[3::])
+    if tsec==60:
+      tsec = 0
+      tmin -= 1
+  tmin0 = abs(tmin)
+  tminstr = '%02d' % tmin0
+  tsecstr = '%02d' % tsec
+  tdict = {"1":"00","0":"00","-1":"-00"}
+  tremain =  tdict[str(tsign)] + ":" + tminstr + ":" + tsecstr
+  return tremain
+
+def parseTR(trHTML,teams,qtr):
   isParsed = True
   H = trHTML.split("<td")[1::]
   if len(H)==3:
@@ -33,16 +52,14 @@ def parseTR(trHTML,teams,qtr):
       play = S2.group()
     else:
       isParsed = False
-      time=""
+      tremain=""
       play = "Error"
   else:
     isParsed = False
-    time = ""
+    tremain = ""
     play = "Error"  
   if isParsed:
-    tmin = int(time[0:2])
-    tsec = float(time[3::])
-    tremain =  str(qstart[qtr]+tmin) + ":" + '%02d' % tsec
+    tremain = timeRemaining(time,qtr)
   else:
     tremain = []
   return isParsed,tremain,play
