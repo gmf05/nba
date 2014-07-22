@@ -12,63 +12,63 @@ def parseTR(trHTML,teams,qtr):
     rgt = re.search(">(.+)&nbsp;<",H[2])
     time = re.search(">(.+) <",H[1]).groups()[0] 
     if lft:
-      event = "[" + teams[0] + "]" + lft.groups()[0]
+      play = "[" + teams[0] + "]" + lft.groups()[0]
     elif rgt:
-      event = "[" + teams[1] + "]" + rgt.groups()[0]
+      play = "[" + teams[1] + "]" + rgt.groups()[0]
     else:
-        isParsed = False
-        event = "Error"
+      isParsed = False
+      play = "Error"
   elif len(H)==1:
     S1 = re.search('<div class="gameEvent">(.+)</div>',H[0].rstrip())
     # check S1 -- jump ball doesn't print...
     S2 = re.search("End of  ([\d].+)",H[0])
     if S1:
+      play = S1.groups()[0] 
       if qtr<5:
         time="12:00"
       else:
         time="5:00"
-      event = S1.groups()[0] 
     elif S2:
       time="00:00"
-      event = S2.group()
+      play = S2.group()
     else:
       isParsed = False
-      time="--"
-      event = "Error"
+      time=""
+      play = "Error"
   else:
     isParsed = False
-    time = "00:00"
-    event = "Error"
-  
+    time = ""
+    play = "Error"  
   if isParsed:
     tmin = int(time[0:2])
     tsec = float(time[3::])
     tremain =  str(qstart[qtr]+tmin) + ":" + '%02d' % tsec
   else:
     tremain = []
-  return isParsed,tremain,event
+  return isParsed,tremain,play
 
 def parsePlayList(date,teams):
   urlroot = "http://www.nba.com/games/"
   date = date.replace("-","")
-  gameID = date + "".join(teams)
-  url = urlroot + date + "/" + "".join(teams) + "/gameinfo.html"
+  teamID = "".join(teams)
+  gameID = date + teamID
+  url = urlroot + date + "/" + teamID + "/gameinfo.html"
   f = urllib2.urlopen(url)
   html = f.read()
   f.close()
-  H = html.split('<tr class="nbaGIPBPTeams">')
-  H.remove(H[0])
-  H[-1] = H[-1].split("</table>")[0]
-  eventList = []
+  h = html.split('<tr class="nbaGIPBPTeams">')
+  h.remove(h[0])
+  h[-1] = h[-1].split("</table>")[0]
+  playList = []
   count=1
-  for i in range(len(H)):
-    rows = H[i].split("</tr>")[1::]
+  for i in range(len(h)):
+    rows = h[i].split("</tr>")[1::]
     for r in rows:
-      (isParsed,time,event) = parseTR(r,teams,i)
+      (isParsed,time,play) = parseTR(r,teams,i)
       if isParsed:
-        eventList.append([gameID,str(count),time,event])
+        playList.append([gameID,str(count),time,play])
         count+=1
-  return eventList
+  return playList
 
 def writePlays(season):
   gamelist = "NBAdata/gamelist" + season + ".txt"
@@ -85,9 +85,9 @@ def writePlays(season):
     teams = [l[1].rstrip(), l[2].rstrip()]
     print teams
     try:
-      eventList = parsePlayList(date,teams)
-      for event in eventList:
-        fw.write("\t".join(event) + "\n")
+      playList = parsePlayList(date,teams)
+      for play in playList:
+        fw.write("\t".join(play) + "\n")
     except:
       [] 
   fw.close()
