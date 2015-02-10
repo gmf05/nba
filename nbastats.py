@@ -162,4 +162,8 @@ def main():
   saveMat(team,season)
 
 if __name__ == "__main__":
-  main()
+  yyyy = sys.argv[1]
+#   csvSeason(sys.argv[1]) # works
+#   xlsSeason(sys.argv[1]) # doesn't work
+  matSeason(sys.argv[1]) # works
+#   getPlayerSeason(sys.argv)
