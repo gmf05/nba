@@ -24,7 +24,7 @@ def shotStatus(play):
       pts = 3
     else:
       pts = 2
-    if re.match("[Mm]ade",S2):
+    if re.match(r"[Mm]ade",S2):
       isMade = True
     else:
       isMade = False
@@ -54,13 +54,13 @@ def getShots(team,season):
           print gameID + " " + str(shotTime) + " sec: " + team + " " + str(pts) + "pt shot: " + str(isMade)
         else:
           oshots.append([gameID,shotTime,pts,isMade])
-          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
+          opp = re.match('\[[A-Z]{3}',play).group().split("[")[1]
           print gameID + " " + str(shotTime) + " sec: " + opp + " " + str(pts) + "pt shot: " + str(isMade)
   return shots,oshots
 
 def getFouls(team,season):
   delim = "\t"
-  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
+  playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   fouls = []
@@ -78,13 +78,17 @@ def getFouls(team,season):
           print gameID + " " + str(playTime) + " " + team + " Foul" 
         else:
           ofouls.append([gameID,playTime])
-          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
-          print gameID + " " + str(playTime) + " " + opp + " Foul"
+	  try:
+            opp = re.match('\[[A-Z]{3}',play).group().split("[")[1]
+            print gameID + " " + str(playTime) + " " + opp + " Foul"
+	  except:
+	    print play
+            wait = input('PRESS ENTER TO CONTINUE.')
   return fouls,ofouls
 
 def getTOs(team,season):
   delim = "\t"
-  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
+  playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   tos = []
@@ -102,8 +106,14 @@ def getTOs(team,season):
           print gameID + " " + str(playTime) + " " + team + " Turnover" 
         else:
           otos.append([gameID,playTime])
-          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
-          print gameID + " " + str(playTime) + " " + opp + " Turnover"
+	  try:
+            opp = re.match('\[[A-Z]{3}?',play).group().split("[")[1]
+            print gameID + " " + str(playTime) + " " + opp + " Turnover"
+	  except:
+	    print play
+            # for some reason fails for
+  	    # plays like: (12:00) [OKC] Team 5 Sec Inbound Turnover :
+            wait = input('PRESS ENTER TO CONTINUE.')
   return tos,otos
 
 def ppList(myList):
