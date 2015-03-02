@@ -24,7 +24,7 @@ def shotStatus(play):
       pts = 3
     else:
       pts = 2
-    if re.match(r"[Mm]ade",S2):
+    if re.search(r"[Mm]ade",S2):
       isMade = True
     else:
       isMade = False
@@ -54,7 +54,8 @@ def getShots(team,season):
           print gameID + " " + str(shotTime) + " sec: " + team + " " + str(pts) + "pt shot: " + str(isMade)
         else:
           oshots.append([gameID,shotTime,pts,isMade])
-          opp = re.match('\[[A-Z]{3}',play).group().split("[")[1]
+          # note: we want re.search rather than re.match (which starts at string beginning)
+          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
           print gameID + " " + str(shotTime) + " sec: " + opp + " " + str(pts) + "pt shot: " + str(isMade)
   return shots,oshots
 
@@ -78,12 +79,9 @@ def getFouls(team,season):
           print gameID + " " + str(playTime) + " " + team + " Foul" 
         else:
           ofouls.append([gameID,playTime])
-	  try:
-            opp = re.match('\[[A-Z]{3}',play).group().split("[")[1]
-            print gameID + " " + str(playTime) + " " + opp + " Foul"
-	  except:
-	    print play
-            wait = input('PRESS ENTER TO CONTINUE.')
+          # note: we want re.search rather than re.match (which starts at string beginning)
+          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
+          print gameID + " " + str(playTime) + " " + opp + " Foul"
   return fouls,ofouls
 
 def getTOs(team,season):
@@ -106,14 +104,9 @@ def getTOs(team,season):
           print gameID + " " + str(playTime) + " " + team + " Turnover" 
         else:
           otos.append([gameID,playTime])
-	  try:
-            opp = re.match('\[[A-Z]{3}?',play).group().split("[")[1]
-            print gameID + " " + str(playTime) + " " + opp + " Turnover"
-	  except:
-	    print play
-            # for some reason fails for
-  	    # plays like: (12:00) [OKC] Team 5 Sec Inbound Turnover :
-            wait = input('PRESS ENTER TO CONTINUE.')
+          # note: we want re.search rather than re.match (which starts at string beginning)
+          opp = re.search('\[[A-Z]{3}?',play).group().split("[")[1]
+          print gameID + " " + str(playTime) + " " + opp + " Turnover"
   return tos,otos
 
 def ppList(myList):
@@ -165,7 +158,7 @@ def saveMat(team,season):
     if s[3]:
       oshots[ind+1,t] = 1
   D = {"shots":shots,"oshots":oshots,"games":games,"Ngames":Ngames,"tos":tos,"otos":otos,"fouls":fouls,"ofouls":ofouls}
-  matfile = team + season + ".mat"
+  matfile = "stats_" + season + "_" + team + ".mat"
   spio.matlab.savemat(matfile,D)
 
 def main():
