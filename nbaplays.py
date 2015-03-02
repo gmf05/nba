@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# code to turn a list of nba games into play-by-play data
 import re
 import numpy
 import urllib2
@@ -88,16 +89,14 @@ def parsePlayList(date,teams):
   return playList
 
 def writePlays(season):
-  gamelist = "NBAdata/gamelist" + season + ".txt"
-  playbyplay = "NBAdata/playbyplay" + season + ".txt"
+  gamelist = "gamelist_" + season + ".txt"
+  playbyplay = "playbyplay_" + season + ".txt"
   fr = open(gamelist,"r")
   fw = open(playbyplay,"w")
   fr.readline()
   fw.write("GameID\tLineNumber\tTimeRemaining\tEntry\n")
   for l in fr.readlines():
     l = l.split("\t")
-#     date = l[2].replace("-","") # old
-#     teams = [l[9], l[7]] # old
     date = l[0].replace("-","")
     teams = [l[1].rstrip(), l[2].rstrip()]
     print teams
@@ -110,11 +109,8 @@ def writePlays(season):
   fw.close()
 
 def main():
-  season = "2014playoffs"
+  season = "201415"
   writePlays(season)
-#   e = parsePlayList("2014-06-15",["MIA","SAS"])
-#   parsePlayList("20140424",["OKC","MEM"])
-#   parsePlayList("20140201",["MIA","NYK"])
 
 if __name__ == "__main__":
     main()

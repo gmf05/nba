@@ -88,8 +88,9 @@ def parsePlayList(date,teams):
   return playList
 
 def writePlays(season):
-  gamelist = "NBAdata/gamelist" + season + ".txt"
-  playbyplay = "NBAdata/playbyplay" + season + ".txt"
+  gamelist = "gamelist_" + season + ".txt"
+  playbyplay = "playbyplay_" + season + ".txt"
+
   fr = open(gamelist,"r")
   fw = open(playbyplay,"w")
   fr.readline()
@@ -110,7 +111,8 @@ def writePlays(season):
   fw.close()
 
 def main():
-  season = "2014playoffs"
+#  season = "2014playoffs"
+  season = "201415"
   writePlays(season)
 #   e = parsePlayList("2014-06-15",["MIA","SAS"])
 #   parsePlayList("20140424",["OKC","MEM"])
