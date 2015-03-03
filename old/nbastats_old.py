@@ -1,7 +1,4 @@
 #!/usr/bin/python
-# code to turn nba play-by-play data into point process for a particular game event
-# e.g. get the sequence of shot attempts (per second) [0 0 0 0 1 0 0 0 0 0 ...]
-#
 import sys
 import re
 import numpy
@@ -24,7 +21,7 @@ def shotStatus(play):
       pts = 3
     else:
       pts = 2
-    if re.search(r"[Mm]ade",S2):
+    if re.match("[Mm]ade",S2):
       isMade = True
     else:
       isMade = False
@@ -35,7 +32,7 @@ def shotStatus(play):
 
 def getShots(team,season):
   delim = "\t"
-  playfile = "playbyplay_" + season + ".txt"
+  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   shots = []
@@ -54,14 +51,13 @@ def getShots(team,season):
           print gameID + " " + str(shotTime) + " sec: " + team + " " + str(pts) + "pt shot: " + str(isMade)
         else:
           oshots.append([gameID,shotTime,pts,isMade])
-          # note: we want re.search rather than re.match (which starts at string beginning)
-          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
+          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
           print gameID + " " + str(shotTime) + " sec: " + opp + " " + str(pts) + "pt shot: " + str(isMade)
   return shots,oshots
 
 def getFouls(team,season):
   delim = "\t"
-  playfile = "playbyplay_" + season + ".txt"
+  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   fouls = []
@@ -79,14 +75,13 @@ def getFouls(team,season):
           print gameID + " " + str(playTime) + " " + team + " Foul" 
         else:
           ofouls.append([gameID,playTime])
-          # note: we want re.search rather than re.match (which starts at string beginning)
-          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
+          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
           print gameID + " " + str(playTime) + " " + opp + " Foul"
   return fouls,ofouls
 
 def getTOs(team,season):
   delim = "\t"
-  playfile = "playbyplay_" + season + ".txt"
+  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   tos = []
@@ -104,8 +99,7 @@ def getTOs(team,season):
           print gameID + " " + str(playTime) + " " + team + " Turnover" 
         else:
           otos.append([gameID,playTime])
-          # note: we want re.search rather than re.match (which starts at string beginning)
-          opp = re.search('\[[A-Z]{3}?',play).group().split("[")[1]
+          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
           print gameID + " " + str(playTime) + " " + opp + " Turnover"
   return tos,otos
 
@@ -158,13 +152,18 @@ def saveMat(team,season):
     if s[3]:
       oshots[ind+1,t] = 1
   D = {"shots":shots,"oshots":oshots,"games":games,"Ngames":Ngames,"tos":tos,"otos":otos,"fouls":fouls,"ofouls":ofouls}
-  matfile = "stats_" + season + "_" + team + ".mat"
+  matfile = team + season + ".mat"
   spio.matlab.savemat(matfile,D)
 
 def main():
   team = sys.argv[1]
-  season = "201415"
+#   season = "2011playoffs"
+  season = "2014playoffs"
   saveMat(team,season)
 
 if __name__ == "__main__":
-  main()
+  yyyy = sys.argv[1]
+#   csvSeason(sys.argv[1]) # works
+#   xlsSeason(sys.argv[1]) # doesn't work
+  matSeason(sys.argv[1]) # works
+#   getPlayerSeason(sys.argv)

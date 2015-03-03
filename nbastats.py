@@ -1,8 +1,18 @@
 #!/usr/bin/python
+# code to turn nba play-by-play data into point process for a particular game event
+# e.g. get the sequence of shot attempts (per second) [0 0 0 0 1 0 0 0 0 0 ...]
+#
 import sys
 import re
-import numpy
+import numpy as np
 import scipy.io as spio
+
+# LEAVING HERE FOR FUTURE IMPLEMENTATION:
+# each feature will need a specific function(s) in order to (1) specify search string in play-by-play
+# and (2) declare how to count / form processes, e.g. shot processes depend on shot type (2 vs 3 pointer) and miss/made status
+#
+#team_features = "date,team,o:team,points,margin,margin after the first,margin at the half,margin after the third,biggest lead,field goals attempted,field goals made,three pointers attempted,three pointers made,free throws attempted,free throws made,points in the paint,assists,steals,blocks,offensive rebounds,defensive rebounds,turnovers"
+#player_features="o:team,assists,blocks,defensive rebounds,field goals attempted,field goals made,fouls,free throws attempted,free throws made,minutes,offensive rebounds,points,rebounds,steals,three pointers attempted,three pointers made,turnovers"
 
 def playTimeSec(clockStr):
   t = clockStr.split(":")
@@ -21,7 +31,7 @@ def shotStatus(play):
       pts = 3
     else:
       pts = 2
-    if re.match("[Mm]ade",S2):
+    if re.search(r"[Mm]ade",S2):
       isMade = True
     else:
       isMade = False
@@ -32,7 +42,7 @@ def shotStatus(play):
 
 def getShots(team,season):
   delim = "\t"
-  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
+  playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   shots = []
@@ -40,7 +50,9 @@ def getShots(team,season):
   for l in f.readlines():
     l = l.split(delim)
     gameID = l[0]
-    if re.search(team,gameID):
+    # note we match gameID sections explicitly because global match can be problematic:
+    # i.e. ORL is a substring of PORLAC
+    if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
       (isShot,isMade,pts) = shotStatus(play)
       shotTime = playTimeSec(l[2])
@@ -51,13 +63,14 @@ def getShots(team,season):
           print gameID + " " + str(shotTime) + " sec: " + team + " " + str(pts) + "pt shot: " + str(isMade)
         else:
           oshots.append([gameID,shotTime,pts,isMade])
-          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
+          # note: we want re.search rather than re.match (which starts at string beginning)
+          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
           print gameID + " " + str(shotTime) + " sec: " + opp + " " + str(pts) + "pt shot: " + str(isMade)
   return shots,oshots
 
 def getFouls(team,season):
   delim = "\t"
-  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
+  playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   fouls = []
@@ -65,7 +78,9 @@ def getFouls(team,season):
   for l in f.readlines():
     l = l.split(delim)
     gameID = l[0]
-    if re.search(team,gameID):
+    # note we match gameID sections explicitly because global match can be problematic:
+    # i.e. ORL is a substring of PORLAC
+    if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
       playTime = playTimeSec(l[2])
       if re.search("[Ff]oul",play):
@@ -75,13 +90,14 @@ def getFouls(team,season):
           print gameID + " " + str(playTime) + " " + team + " Foul" 
         else:
           ofouls.append([gameID,playTime])
-          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
+          # note: we want re.search rather than re.match (which starts at string beginning)
+          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
           print gameID + " " + str(playTime) + " " + opp + " Foul"
   return fouls,ofouls
 
 def getTOs(team,season):
   delim = "\t"
-  playfile = "NBAdata/bballvalue/playbyplay" + season + ".txt"
+  playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
   tos = []
@@ -89,7 +105,9 @@ def getTOs(team,season):
   for l in f.readlines():
     l = l.split(delim)
     gameID = l[0]
-    if re.search(team,gameID):
+    # note we match gameID sections explicitly because global match can be problematic:
+    # i.e. ORL is a substring of PORLAC
+    if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
       playTime = playTimeSec(l[2])
       if re.search("[Tt]urnover",play):
@@ -99,71 +117,65 @@ def getTOs(team,season):
           print gameID + " " + str(playTime) + " " + team + " Turnover" 
         else:
           otos.append([gameID,playTime])
-          opp = re.match("\[[A-Z]{3}",play).group().split("[")[1]
+          # note: we want re.search rather than re.match (which starts at string beginning)
+          opp = re.search('\[[A-Z]{3}?',play).group().split("[")[1]
           print gameID + " " + str(playTime) + " " + opp + " Turnover"
   return tos,otos
 
-def ppList(myList):
-  games = [myList[0][0]]
-  for s in myList:
-    if s[0]!=games[-1]:
-      games.append(s[0])
-  Ngames = len(games)
-  secPerGame = 48*60
-  Nsec = secPerGame*Ngames
-  pp = numpy.zeros([1,Nsec])
+def minGameLength(nsec):
+  regSec = 2880
+  diffsec = nsec - regSec
+  if diffsec<=0:
+    gamelength = regSec
+  else:
+    gamelength = regSec + 300*np.ceil(diffsec/300.0)
+  return gamelength
 
+def ppList(myList,games,secPerGame):
+  sumSec = np.append(0, np.cumsum(secPerGame))
+  Nsec = sumSec[-1]
+  pp = np.zeros([1,Nsec])
   for s in myList:
     game = games.index(s[0])
-    t = game*secPerGame+s[1]-1
+    t = sumSec[game]+s[1]-1
     pp[0][t] = 1
   return pp
-
 
 def saveMat(team,season):
   (shotList,oshotList) = getShots(team,season)
   (foulList, ofoulList) = getFouls(team,season)
   (toList,otoList) = getTOs(team,season)
   games = [shotList[0][0]]
+  secPerGame = []
   for s in shotList:
+    # if this shot starts new game, save name of new game & length of game that just ended
     if s[0]!=games[-1]:
-      games.append(s[0])
+      games.append(s[0]) # save name of new game
+      # what is expected length of game given time of the final shot?
+      s0 = shotList[shotList.index(s)-1]
+      gamesec = minGameLength(s0[1])
+      secPerGame.append(gamesec)
+  # add length of final game
+  s0=shotList[-1] # final shot of final game
+  secPerGame.append(minGameLength(s0[1])) # how long was final game?
+  secPerGame = np.array(secPerGame)
+  Nsec = np.sum(secPerGame)
+  sumSec = np.append(0, np.cumsum(secPerGame))
   Ngames = len(games)
-  secPerGame = 48*60
-  Nsec = secPerGame*Ngames
-  shots = numpy.zeros([4,Nsec])
-  oshots = numpy.zeros([4,Nsec])
-  fouls = ppList(foulList)
-  ofouls = ppList(ofoulList)
-  tos = ppList(toList)
-  otos = ppList(otoList)
-  for s in shotList:
-    game = games.index(s[0])
-    ind = 2*(s[2]==3)
-    t = game*secPerGame+s[1]-1
-    shots[ind,t] = 1
-    if s[3]:      
-      shots[ind+1,t] = 1
-  for s in oshotList:
-    game = games.index(s[0])
-    ind = 2*(s[2]==3) 
-    t = game*secPerGame+s[1]-1
-    oshots[ind,t] = 1
-    if s[3]:
-      oshots[ind+1,t] = 1
-  D = {"shots":shots,"oshots":oshots,"games":games,"Ngames":Ngames,"tos":tos,"otos":otos,"fouls":fouls,"ofouls":ofouls}
-  matfile = team + season + ".mat"
+  shots = np.zeros([4,Nsec])
+  oshots = np.zeros([4,Nsec])
+  fouls = ppList(foulList,games,secPerGame)
+  ofouls = ppList(ofoulList,games,secPerGame)
+  tos = ppList(toList,games,secPerGame)
+  otos = ppList(otoList,games,secPerGame)
+  D = {"shots":shots,"oshots":oshots,"games":games,"Ngames":Ngames,"tos":tos,"otos":otos,"fouls":fouls,"ofouls":ofouls,"secPerGame":secPerGame}
+  matfile = "stats_" + season + "_" + team + ".mat"
   spio.matlab.savemat(matfile,D)
 
 def main():
   team = sys.argv[1]
-#   season = "2011playoffs"
-  season = "2014playoffs"
+  season = "201415"
   saveMat(team,season)
 
 if __name__ == "__main__":
-  yyyy = sys.argv[1]
-#   csvSeason(sys.argv[1]) # works
-#   xlsSeason(sys.argv[1]) # doesn't work
-  matSeason(sys.argv[1]) # works
-#   getPlayerSeason(sys.argv)
+  main()
