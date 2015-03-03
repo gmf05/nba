@@ -7,5 +7,3 @@ do
   ./nbastats.py $i
 done
 
-# keep this line to ensure newline
-
