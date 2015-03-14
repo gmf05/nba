@@ -12,4 +12,4 @@ Data collection and formatting is divided into three Python scripts:
 3. nbastats.py : Given a list of play-by-play data, convert certain events (shots attempted/made, fouls, turnovers) into point process data (i.e. list of binary outcomes over time [0 0 0 0 1 ...])
 
 
-Further point process analysis relies on the Point Process Toolbox (pp_tools) repo. This includes data visualization, model estimation, model validation, etc.
+Further point process analysis occurs in Matlab and relies on the Point Process Toolbox (pp_tools) repo. This includes methods for data visualization, model estimation, model validation, etc.
