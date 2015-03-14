@@ -2,28 +2,83 @@
 # code to turn nba play-by-play data into point process for a particular game event
 # e.g. get the sequence of shot attempts (per second) [0 0 0 0 1 0 0 0 0 0 ...]
 #
+global VERBOSE
+VERBOSE = False
+
 import sys
 import re
 import numpy as np
 import scipy.io as spio
 
 # LEAVING HERE FOR FUTURE IMPLEMENTATION:
+#
+# Add functions to parse start/end of quarters???
+#
 # each feature will need a specific function(s) in order to (1) specify search string in play-by-play
 # and (2) declare how to count / form processes, e.g. shot processes depend on shot type (2 vs 3 pointer) and miss/made status
 #
 #team_features = "date,team,o:team,points,margin,margin after the first,margin at the half,margin after the third,biggest lead,field goals attempted,field goals made,three pointers attempted,three pointers made,free throws attempted,free throws made,points in the paint,assists,steals,blocks,offensive rebounds,defensive rebounds,turnovers"
 #player_features="o:team,assists,blocks,defensive rebounds,field goals attempted,field goals made,fouls,free throws attempted,free throws made,minutes,offensive rebounds,points,rebounds,steals,three pointers attempted,three pointers made,turnovers"
 
-def playTimeSec(clockStr):
-  t = clockStr.split(":")
-  if t[0][0] is "-":
-    playTime = 48*60 + 60*int(t[1]) + int(t[2])
-  else:
-    playTime = 60*(47-int(t[1]))+60-int(t[2])
-  return playTime
+def minGameLength(nsec): # what is the minimum game length at this point?
+  if nsec < 2880: # if game time < 2880 no overtime yet
+    gamelength = 2880
+  else: # game has overtime!
+    gamelength = 2880 + 300*np.ceil((nsec - 2880)/300.0) # add 300 sec per overtime
+  return gamelength
+
+def numSecElapsed(qtr,minRemain,secRemain): # translate time remaining into time elapsed
+  if type(qtr) is str:
+    qtr = int(qtr)
+  if type(minRemain) is str:
+    minRemain = int(minRemain)
+  if type(secRemain) is str:
+    secRemain = float(secRemain)
+  if qtr>4: # in overtime, add 300 sec per overtime
+    secElapsed = 2880 + (qtr-5)*300 + (4-minRemain)*60 + 60 - secRemain
+  else: # in regulation, add 720 sec per quarter
+    secElapsed = (qtr-1)*720 + (11-minRemain)*60 + 60 - secRemain
+  return secElapsed
+
+def getEvents(team,season,eventName):
+  # works for finding simple events distinguished by one word in the play-by-play text
+  # e.g. if the regexp match for assist is "[Aa]ssist"
+  # this should NOT be used for parsing shots; use getShots instead
+  delim = "\t"
+  searchString = "[" + str.upper(eventName[0]) + str.lower(eventName[0]) + "]" + eventName[1::] # e.g. Assist -> [Aa]ssist
+  playfile = "playbyplay_" + season + ".txt"
+  f = open(playfile,'r')
+  features = f.readline()
+  events = []
+  oevents = []
+  # cycle over plays, search for searchString, and decide if events occurs for team or for opponent 
+  for l in f.readlines():
+    l = l.split(delim)
+    gameID = l[1]
+    # note we match gameID sections explicitly because global match can be problematic:
+    # i.e. ORL is a substring of PORLAC
+    if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
+      play = l[-1]
+      if re.search(searchString,play):
+        playTime = numSecElapsed(l[2], l[3], l[4]) # qtr, minRemain, secRemain
+        isTeam = bool(re.search(team,play))
+        if isTeam:
+          events.append([gameID,playTime])
+          eventTeam = team
+        else:
+          oevents.append([gameID,playTime])
+          # note: we want re.search rather than re.match (which starts at string beginning)
+          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
+          eventTeam = opp
+        if VERBOSE:
+          print gameID + " " + str(playTime) + " " + eventTeam + " " + eventName          
+  return events,oevents
 
 def shotStatus(play):
-  isShot = bool(re.search("[Ss]hot",play))
+  # 
+  #
+  # see if "shot" appears in play (and *not* "shot clock turnover"!):
+  isShot = bool(re.search("[Ss]hot(?! [Cc]lock [Tt]urnover)",play))
   if isShot:
     S1 = play.split(" [Ss]hot")[0]    
     S2 = play.split(": ")[1]
@@ -39,6 +94,25 @@ def shotStatus(play):
     pts = 0
     isMade = False
   return isShot,isMade,pts
+  
+def ftStatus(play):
+    isFT = bool(re.search("[Ff]ree [Tt]hrow",play))
+    ftNum = 0
+    isMade = False
+    if isFT:      
+        checkDigits = re.search("(\d) of (\d)",play)
+        if checkDigits:       
+            ftNum = map(int,checkDigits.groups())
+        else:
+            ftNum = [1, 1]
+            if VERBOSE:            
+              print "Technical?" # debug
+        S1 = play.split(" [Ff]ree [Tt]hrow")[0]    
+        if re.search("[Mm]issed",S1):
+            isMade = False
+        else:
+            isMade = True
+    return isFT,ftNum,isMade
 
 def getShots(team,season):
   delim = "\t"
@@ -49,87 +123,87 @@ def getShots(team,season):
   oshots = []
   for l in f.readlines():
     l = l.split(delim)
-    gameID = l[0]
+    gameID = l[1]
     # note we match gameID sections explicitly because global match can be problematic:
     # i.e. ORL is a substring of PORLAC
     if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
       (isShot,isMade,pts) = shotStatus(play)
-      shotTime = playTimeSec(l[2])
       if isShot:
+        shotTime = numSecElapsed(l[2], l[3], l[4]) # qtr, minRemain, secRemain
         isTeam = bool(re.search(team,play))
         if isTeam:
           shots.append([gameID,shotTime,pts,isMade])
-          print gameID + " " + str(shotTime) + " sec: " + team + " " + str(pts) + "pt shot: " + str(isMade)
+          eventTeam = team
         else:
           oshots.append([gameID,shotTime,pts,isMade])
           # note: we want re.search rather than re.match (which starts at string beginning)
           opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
-          print gameID + " " + str(shotTime) + " sec: " + opp + " " + str(pts) + "pt shot: " + str(isMade)
+          eventTeam = opp
+        if VERBOSE:
+          print gameID + " " + str(shotTime) + " sec: " + eventTeam + " " + str(pts) + "pt shot: " + str(isMade)
   return shots,oshots
-
-def getFouls(team,season):
+  
+def getFTs(team,season):
   delim = "\t"
   playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
-  fouls = []
-  ofouls = []
+  fts = []
+  ofts = []
   for l in f.readlines():
     l = l.split(delim)
-    gameID = l[0]
+    gameID = l[1]
     # note we match gameID sections explicitly because global match can be problematic:
     # i.e. ORL is a substring of PORLAC
     if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
-      playTime = playTimeSec(l[2])
-      if re.search("[Ff]oul",play):
+      (isFT,ftNum,isMade) = ftStatus(play)
+      if isFT:
+        ftTime = numSecElapsed(l[2], l[3], l[4]) # qtr, minRemain, secRemain
         isTeam = bool(re.search(team,play))
         if isTeam:
-          fouls.append([gameID,playTime])
-          print gameID + " " + str(playTime) + " " + team + " Foul" 
+          fts.append([gameID,ftTime,ftNum,isMade])
+          eventTeam = team
         else:
-          ofouls.append([gameID,playTime])
+          ofts.append([gameID,ftTime,ftNum,isMade])
           # note: we want re.search rather than re.match (which starts at string beginning)
           opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
-          print gameID + " " + str(playTime) + " " + opp + " Foul"
-  return fouls,ofouls
+          eventTeam = opp
+        if VERBOSE:
+          print gameID + " " + str(ftTime) + " sec: " + eventTeam + " Free throw " + str(ftNum[0]) + " of " + str(ftNum[1]) + " : " + str(isMade)
+  return fts,ofts
 
-def getTOs(team,season):
+def getFinalFTs(team,season):
   delim = "\t"
   playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
-  tos = []
-  otos = []
+  fts = []
+  ofts = []
   for l in f.readlines():
     l = l.split(delim)
-    gameID = l[0]
+    gameID = l[1]
     # note we match gameID sections explicitly because global match can be problematic:
     # i.e. ORL is a substring of PORLAC
     if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
-      playTime = playTimeSec(l[2])
-      if re.search("[Tt]urnover",play):
+      (isFT,ftNum,isMade) = ftStatus(play)
+      if isFT and ftNum[0]==ftNum[1]:
+        ftTime = numSecElapsed(l[2], l[3], l[4]) # qtr, minRemain, secRemain
         isTeam = bool(re.search(team,play))
         if isTeam:
-          tos.append([gameID,playTime])
-          print gameID + " " + str(playTime) + " " + team + " Turnover" 
+          fts.append([gameID,ftTime,ftNum,isMade])
+          eventTeam = team
         else:
-          otos.append([gameID,playTime])
+          ofts.append([gameID,ftTime,ftNum,isMade]) 
           # note: we want re.search rather than re.match (which starts at string beginning)
-          opp = re.search('\[[A-Z]{3}?',play).group().split("[")[1]
-          print gameID + " " + str(playTime) + " " + opp + " Turnover"
-  return tos,otos
+          opp = re.search('\[[A-Z]{3}',play).group().split("[")[1]
+          eventTeam = opp
+        if VERBOSE:
+          print gameID + " " + str(ftTime) + " sec: " + eventTeam + " Free throw " + str(ftNum[0]) + " of " + str(ftNum[1]) + " : " + str(isMade)
+  return fts,ofts
 
-def minGameLength(nsec):
-  regSec = 2880
-  diffsec = nsec - regSec
-  if diffsec<=0:
-    gamelength = regSec
-  else:
-    gamelength = regSec + 300*np.ceil(diffsec/300.0)
-  return gamelength
 
 def ppList(myList,games,secPerGame):
   sumSec = np.append(0, np.cumsum(secPerGame))
@@ -141,34 +215,80 @@ def ppList(myList,games,secPerGame):
     pp[0][t] = 1
   return pp
 
+def ppShots(shotList,games,secPerGame):
+  sumSec = np.append(0, np.cumsum(secPerGame))
+  Nsec = sumSec[-1]
+  shots = np.zeros([4,Nsec])
+  for s in shotList:
+    game = games.index(s[0])
+    ind = 2*(s[2]==3)
+    t = sumSec[game]+s[1]-1
+    shots[ind,t] = 1
+    if s[3]:      
+      shots[ind+1,t] = 1
+  return shots
+
+def ppFTs(ftList,games,secPerGame):
+  sumSec = np.append(0, np.cumsum(secPerGame))
+  Nsec = sumSec[-1]
+  fts = np.zeros([2,Nsec])
+  for s in ftList:
+    game = games.index(s[0])
+    t = sumSec[game]+s[1]-1
+    fts[0][t] = s[2][1] # how many fts taken in this trip?
+    fts[1][t] += s[3] # count number fts made
+  return fts
+  
+def getGames(team,season):
+  gamelist = "gamelist_" + season + ".txt" # list of games
+  delim = "\t"  
+  f = open(gamelist,"r") 
+  games = []
+  for l in f.readlines():
+    l = l.replace('\n','').split(delim)
+    if l[1]==team or l[2]==team:
+      games.append("".join(l))
+  return games
+
 def saveMat(team,season):
+  # parse play-by-play for lists of event times
   (shotList,oshotList) = getShots(team,season)
-  (foulList, ofoulList) = getFouls(team,season)
-  (toList,otoList) = getTOs(team,season)
-  games = [shotList[0][0]]
+  (foulList,ofoulList) = getEvents(team,season,"Foul")
+  (toList,otoList) = getEvents(team,season,"Turnover")
+  (rebList,orebList) = getEvents(team,season,"Rebound")
+  (asstList,oasstList) = getEvents(team,season,"Assist")
+  (ftList,oftList) = getFTs(team,season)
+  (ftList,oftList) = getFTs(team,season)
+  # need to know how long each game is to make point process data
+  games = getGames(team, season)
   secPerGame = []
+  g = games[0]
   for s in shotList:
     # if this shot starts new game, save name of new game & length of game that just ended
-    if s[0]!=games[-1]:
-      games.append(s[0]) # save name of new game
-      # what is expected length of game given time of the final shot?
-      s0 = shotList[shotList.index(s)-1]
-      gamesec = minGameLength(s0[1])
+    if not g==s[0]:
+      g = s[0]
+      gamesec = minGameLength(shotList[shotList.index(s)-1][1])
       secPerGame.append(gamesec)
-  # add length of final game
-  s0=shotList[-1] # final shot of final game
-  secPerGame.append(minGameLength(s0[1])) # how long was final game?
+  secPerGame.append(minGameLength(shotList[-1][1])) # add length of final game
   secPerGame = np.array(secPerGame)
-  Nsec = np.sum(secPerGame)
-  sumSec = np.append(0, np.cumsum(secPerGame))
-  Ngames = len(games)
-  shots = np.zeros([4,Nsec])
-  oshots = np.zeros([4,Nsec])
+  # process event lists into point process data:
+  shots = ppShots(shotList,games,secPerGame)
+  oshots = ppShots(oshotList,games,secPerGame)
   fouls = ppList(foulList,games,secPerGame)
   ofouls = ppList(ofoulList,games,secPerGame)
   tos = ppList(toList,games,secPerGame)
   otos = ppList(otoList,games,secPerGame)
-  D = {"shots":shots,"oshots":oshots,"games":games,"Ngames":Ngames,"tos":tos,"otos":otos,"fouls":fouls,"ofouls":ofouls,"secPerGame":secPerGame}
+  rebs = ppList(rebList,games,secPerGame)
+  orebs = ppList(orebList,games,secPerGame)
+  assts = ppList(asstList,games,secPerGame)
+  oassts = ppList(oasstList,games,secPerGame)
+  fts = ppFTs(ftList,games,secPerGame)
+  ofts = ppFTs(oftList,games,secPerGame)
+#  D = {"shots":shots, "oshots":oshots, "rebs":rebs, "orebs":orebs, "assts":assts, "oassts":oassts, "games":games, "tos":tos, "otos":otos, "fouls":fouls, "ofouls":ofouls, "fts":fts, "ofts":ofts, "secPerGame":secPerGame}
+  (finalftList,finaloftList) = getFinalFTs(team,season)
+  finalfts = ppFTs(finalftList,games,secPerGame)
+  finalofts = ppFTs(finaloftList,games,secPerGame)
+  D = {"shots":shots, "oshots":oshots, "rebs":rebs, "orebs":orebs, "assts":assts, "oassts":oassts, "games":games, "tos":tos, "otos":otos, "fouls":fouls, "ofouls":ofouls, "fts":fts, "ofts":ofts, "finalfts":finalfts, "finalofts":finalofts, "secPerGame":secPerGame}
   matfile = "stats_" + season + "_" + team + ".mat"
   spio.matlab.savemat(matfile,D)
 

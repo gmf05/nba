@@ -37,14 +37,19 @@ def writeGamelist(filename,startday,stopday):
   fw.close()
 
 def main():
-  season = '201415-preAS'
-  date1 = datetime.date(2014,10,28)
-  date2 = datetime.date(2015,02,12)
-  writeGamelist(season, date1, date2)
+#   season = '201415-preAS'
+#   date1 = datetime.date(2014,10,28)
+#   date2 = datetime.date(2015,02,12)
+#   writeGamelist(season, date1, date2)
+# 
+#   season = '201415-postAS'
+#   date1 = datetime.date(2015,02,16)
+#   date2 = datetime.date(2015,03,01)
+#   writeGamelist(season, date1, date2)
 
-  season = '201415-postAS'
-  date1 = datetime.date(2015,02,16)
-  date2 = datetime.date(2015,03,01)
+  season = '201415-latest'
+  date1 = datetime.date(2015,03,02)
+  date2 = datetime.date.today() - datetime.timedelta(1) # i.e. through yesterday
   writeGamelist(season, date1, date2)
 
 if __name__ == "__main__":

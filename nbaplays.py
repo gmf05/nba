@@ -1,71 +1,10 @@
 #!/usr/bin/python
 # code to turn a list of nba games into play-by-play data
+import sys
 import re
-import numpy
 import urllib2
 
-def timeRemaining(timeStr,qtr):
-  qstart = [36, 24, 12, 0, -5, -10, -15, -20]
-  tmin = qstart[qtr] + int(timeStr[0:2])
-  tsign = numpy.sign(tmin)
-
-  if tsign>=0:    
-    tsec = float(timeStr[3::])
-  else:
-    tmin = tmin+1
-    tsec = 60-float(timeStr[3::])
-    if tsec==60:
-      tsec = 0
-      tmin -= 1
-  tmin0 = abs(tmin)
-  tminstr = '%02d' % tmin0
-  tsecstr = '%02d' % tsec
-  tdict = {"1":"00","0":"00","-1":"-00"}
-  tremain =  tdict[str(tsign)] + ":" + tminstr + ":" + tsecstr
-  return tremain
-
-def parseTR(trHTML,teams,qtr):
-  isParsed = True
-  H = trHTML.split("<td")[1::]
-  if len(H)==3:
-    lft = re.search(">(.+)&nbsp;<",H[0])    
-    rgt = re.search(">(.+)&nbsp;<",H[2])
-    time = re.search(">(.+) <",H[1]).groups()[0] 
-    if lft:
-      play = "[" + teams[0] + "]" + lft.groups()[0]
-    elif rgt:
-      play = "[" + teams[1] + "]" + rgt.groups()[0]
-    else:
-      isParsed = False
-      play = "Error"
-  elif len(H)==1:
-    S1 = re.search('<div class="gameEvent">(.+)</div>',H[0].rstrip())
-    # check S1 -- jump ball doesn't print...
-    S2 = re.search("End of  ([\d].+)",H[0])
-    if S1:
-      play = S1.groups()[0] 
-      if qtr<5:
-        time="12:00"
-      else:
-        time="5:00"
-    elif S2:
-      time="00:00"
-      play = S2.group()
-    else:
-      isParsed = False
-      tremain=""
-      play = "Error"
-  else:
-    isParsed = False
-    tremain = ""
-    play = "Error"  
-  if isParsed:
-    tremain = timeRemaining(time,qtr)
-  else:
-    tremain = []
-  return isParsed,tremain,play
-
-def parsePlayList(date,teams):
+def parsePlayList(date,teams): # parse play-by-play from a single game
   urlroot = "http://www.nba.com/games/"
   date = date.replace("-","")
   teamID = "".join(teams)
@@ -74,42 +13,77 @@ def parsePlayList(date,teams):
   f = urllib2.urlopen(url)
   html = f.read()
   f.close()
-  h = html.split('<tr class="nbaGIPBPTeams">')
-  h.remove(h[0])
-  h[-1] = h[-1].split("</table>")[0]
+  # split by TblHdr for quarter-by-quarter breaks
+  H = html.split('class="nbaGIPbPTblHdr"')
+  # beginning with H[1]
   playList = []
-  count=1
-  for i in range(len(h)):
-    rows = h[i].split("</tr>")[1::]
-    for r in rows:
-      (isParsed,time,play) = parseTR(r,teams,i)
-      if isParsed:
-        playList.append([gameID,str(count),time,play])
-        count+=1
+  count = 1
+  NQ = (len(H) -1)/2
+  for q in range(NQ):  
+    for h in H[2*q+1].split('<tr'):
+      jumpball = re.search('<div class="gameEvent">(.+)</div>', h)
+      if jumpball:
+        if q>=4: # WHICH QUARTER IS IT??
+          mRemain = 5 # overtime
+        else:          
+          mRemain = 12 # regulation
+        sRemain = 0.0
+        play = jumpball.groups()[0]
+      else: # otherwise parse Lft Mid Rgt      
+        qStart = re.search('<a name=".+">(.*)\n', h)
+        if qStart:
+          play = "Start of Q" + str(q+1)
+          if q>=4:
+            mRemain = 5
+          else:
+            mRemain = 12
+          sRemain = 0.0
+        else:
+          l = re.search('<td class="nbaGIPbPLft">(.+)&nbsp;</td>', h)
+          m = re.search('<td class="nbaGIPbPMid">(.+)</td>', h)
+          r = re.search('<td class="nbaGIPbPRgt">(.+)&nbsp;</td>', h)
+          if not m:
+            l = re.search('<td class="nbaGIPbPLftScore">(.+)&nbsp;</td>', h)
+            m = re.search('<td class="nbaGIPbPMidScore">(.+)<br>', h)
+            r = re.search('<td class="nbaGIPbPRgtScore">(.+)&nbsp;</td>', h)
+            if not m:
+              # if we get here, quarter is over
+              play = "End of Q" + str(q+1)
+              mRemain = 0
+              sRemain = 0.0
+          if l:
+            play = "[" + teams[0] + "]" + l.groups()[0]
+          if r:
+            play = "[" + teams[1] + "]" + r.groups()[0]
+          if m:
+            tRemain = m.groups()[0]
+            mRemain = int(re.search('(\d+):\d+',tRemain).groups()[0])
+            sRemain = float(re.search('\d+:(\d.+)\s',tRemain).groups()[0])
+      playList.append([str(count), gameID, str(q+1), str(mRemain), str(sRemain), play])
+      count += 1
   return playList
 
-def writePlays(season):
-  gamelist = "gamelist_" + season + ".txt"
-  playbyplay = "playbyplay_" + season + ".txt"
-  fr = open(gamelist,"r")
+def writePlays(season): # loop play-by-play parser over all games in a season
+  gamelist = "gamelist_" + season + ".txt" # list of games
+#   playbyplay = "playbyplay_" + season + ".txt" # play-by-play output
+  playbyplay = "playbyplay_201415C.txt"
+  fr = open(gamelist,"r") 
   fw = open(playbyplay,"w")
-  fr.readline()
-  fw.write("GameID\tLineNumber\tTimeRemaining\tEntry\n")
-  for l in fr.readlines():
+  fr.readline() # first line is data names
+  fw.write("Number\tGameID\tQuarter\tMinRemain\tSecRemain\tPlay\n") # first line is data names
+  for l in fr.readlines(): # for each game, parse play-by-play
     l = l.split("\t")
     date = l[0].replace("-","")
     teams = [l[1].rstrip(), l[2].rstrip()]
-    print teams
-    try:
-      playList = parsePlayList(date,teams)
-      for play in playList:
-        fw.write("\t".join(play) + "\n")
-    except:
-      [] 
+    print date + "".join(teams) # print which game we're working on
+    playList = parsePlayList(date,teams) # get play list for this game
+    for play in playList:
+      fw.write("\t".join(play) + "\n")
   fw.close()
 
 def main():
-  season = "201415"
+  season = sys.argv[1]  
+#   season = "201415"
   writePlays(season)
 
 if __name__ == "__main__":
