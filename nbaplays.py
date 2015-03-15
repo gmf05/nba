@@ -63,10 +63,22 @@ def parsePlayList(date,teams): # parse play-by-play from a single game
       count += 1
   return playList
 
+def removeExtraRebs(playList): # remove, e.g., "Free Throw 1 of 2 Missed" -> "Team Rebound"
+  prevplay = ''
+  for p in playList: # for each game, parse play-by-play
+    play = p[-1]
+    isReb = re.search("\[[A-Z]+\] [Tt]eam [Rr]ebound", play)
+    ftMiss = re.search("[Ff]ree [Tt]hrow (\d) of (\d) Missed", prevplay)
+    if isReb and ftMiss and ftMiss.groups()[0] < ftMiss.groups()[1]:
+      #print prevplay + "\n" # debug
+      #print play + "\n" # debug
+      playList.remove(p)
+    prevplay = play
+  return playList
+
 def writePlays(season): # loop play-by-play parser over all games in a season
   gamelist = "gamelist_" + season + ".txt" # list of games
-#   playbyplay = "playbyplay_" + season + ".txt" # play-by-play output
-  playbyplay = "playbyplay_201415C.txt"
+  playbyplay = "playbyplay_" + season + "B.txt" # play-by-play output
   fr = open(gamelist,"r") 
   fw = open(playbyplay,"w")
   fr.readline() # first line is data names
@@ -77,6 +89,7 @@ def writePlays(season): # loop play-by-play parser over all games in a season
     teams = [l[1].rstrip(), l[2].rstrip()]
     print date + "".join(teams) # print which game we're working on
     playList = parsePlayList(date,teams) # get play list for this game
+    playList = removeExtraRebs(playList) # remove, e.g., "Free Throw 1 of 2 Missed" -> "Team Rebound"
     for play in playList:
       fw.write("\t".join(play) + "\n")
   fw.close()

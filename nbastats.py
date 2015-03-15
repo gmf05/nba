@@ -45,6 +45,7 @@ def getEvents(team,season,eventName):
   # e.g. if the regexp match for assist is "[Aa]ssist"
   # this should NOT be used for parsing shots; use getShots instead
   delim = "\t"
+  #delim = ","
   searchString = "[" + str.upper(eventName[0]) + str.lower(eventName[0]) + "]" + eventName[1::] # e.g. Assist -> [Aa]ssist
   playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
@@ -99,6 +100,8 @@ def ftStatus(play):
     isFT = bool(re.search("[Ff]ree [Tt]hrow",play))
     ftNum = 0
     isMade = False
+    isTech = bool(re.search("[Tt]echnical", play))
+    isClearPath = bool(re.search("[Cc]lear [Pp]ath", play))
     if isFT:      
         checkDigits = re.search("(\d) of (\d)",play)
         if checkDigits:       
@@ -112,10 +115,11 @@ def ftStatus(play):
             isMade = False
         else:
             isMade = True
-    return isFT,ftNum,isMade
+    return isFT,ftNum,isMade,isTech,isClearPath
 
 def getShots(team,season):
   delim = "\t"
+  #delim = ","
   playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
@@ -146,6 +150,7 @@ def getShots(team,season):
   
 def getFTs(team,season):
   delim = "\t"
+  #delim = ","
   playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
@@ -158,7 +163,7 @@ def getFTs(team,season):
     # i.e. ORL is a substring of PORLAC
     if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
-      (isFT,ftNum,isMade) = ftStatus(play)
+      (isFT,ftNum,isMade,isTech,isClearPath) = ftStatus(play)
       if isFT:
         ftTime = numSecElapsed(l[2], l[3], l[4]) # qtr, minRemain, secRemain
         isTeam = bool(re.search(team,play))
@@ -176,6 +181,7 @@ def getFTs(team,season):
 
 def getFinalFTs(team,season):
   delim = "\t"
+  #delim = ","
   playfile = "playbyplay_" + season + ".txt"
   f = open(playfile,'r')
   features = f.readline()
@@ -188,8 +194,8 @@ def getFinalFTs(team,season):
     # i.e. ORL is a substring of PORLAC
     if re.match(team,gameID[8:11]) or re.match(team,gameID[11::]):
       play = l[-1]
-      (isFT,ftNum,isMade) = ftStatus(play)
-      if isFT and ftNum[0]==ftNum[1]:
+      (isFT,ftNum,isMade,isTech,isClearPath) = ftStatus(play)
+      if isFT and not isTech and not isClearPath and ftNum[0]==ftNum[1]:
         ftTime = numSecElapsed(l[2], l[3], l[4]) # qtr, minRemain, secRemain
         isTeam = bool(re.search(team,play))
         if isTeam:
@@ -203,7 +209,6 @@ def getFinalFTs(team,season):
         if VERBOSE:
           print gameID + " " + str(ftTime) + " sec: " + eventTeam + " Free throw " + str(ftNum[0]) + " of " + str(ftNum[1]) + " : " + str(isMade)
   return fts,ofts
-
 
 def ppList(myList,games,secPerGame):
   sumSec = np.append(0, np.cumsum(secPerGame))
@@ -235,13 +240,15 @@ def ppFTs(ftList,games,secPerGame):
   for s in ftList:
     game = games.index(s[0])
     t = sumSec[game]+s[1]-1
-    fts[0][t] = s[2][1] # how many fts taken in this trip?
+    #fts[0][t] = s[2][1] # how many fts taken in this trip?
+    fts[0][t] += 1 # how many fts taken in this trip?
     fts[1][t] += s[3] # count number fts made
   return fts
   
 def getGames(team,season):
   gamelist = "gamelist_" + season + ".txt" # list of games
   delim = "\t"  
+  #delim = ","
   f = open(gamelist,"r") 
   games = []
   for l in f.readlines():
@@ -255,9 +262,9 @@ def saveMat(team,season):
   (shotList,oshotList) = getShots(team,season)
   (foulList,ofoulList) = getEvents(team,season,"Foul")
   (toList,otoList) = getEvents(team,season,"Turnover")
+  (ostealList,stealList) = getEvents(team,season,"Steal") # NOTE: opponent/team order is reversed for steals
   (rebList,orebList) = getEvents(team,season,"Rebound")
   (asstList,oasstList) = getEvents(team,season,"Assist")
-  (ftList,oftList) = getFTs(team,season)
   (ftList,oftList) = getFTs(team,season)
   # need to know how long each game is to make point process data
   games = getGames(team, season)
@@ -284,7 +291,6 @@ def saveMat(team,season):
   oassts = ppList(oasstList,games,secPerGame)
   fts = ppFTs(ftList,games,secPerGame)
   ofts = ppFTs(oftList,games,secPerGame)
-#  D = {"shots":shots, "oshots":oshots, "rebs":rebs, "orebs":orebs, "assts":assts, "oassts":oassts, "games":games, "tos":tos, "otos":otos, "fouls":fouls, "ofouls":ofouls, "fts":fts, "ofts":ofts, "secPerGame":secPerGame}
   (finalftList,finaloftList) = getFinalFTs(team,season)
   finalfts = ppFTs(finalftList,games,secPerGame)
   finalofts = ppFTs(finaloftList,games,secPerGame)
