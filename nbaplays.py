@@ -76,13 +76,13 @@ def removeExtraRebs(playList): # remove, e.g., "Free Throw 1 of 2 Missed" -> "Te
     prevplay = play
   return playList
 
-def writePlays(season): # loop play-by-play parser over all games in a season
-  gamelist = "gamelist_" + season + ".txt" # list of games
-  playbyplay = "playbyplay_" + season + "B.txt" # play-by-play output
+def writePlays(gamelist, playbyplay): # loop play-by-play parser over all games in a season
+  delim = ","
   fr = open(gamelist,"r") 
   fw = open(playbyplay,"w")
   fr.readline() # first line is data names
-  fw.write("Number\tGameID\tQuarter\tMinRemain\tSecRemain\tPlay\n") # first line is data names
+  keys = ["Number","GameID","Quarter","MinRemain","SecRemain","Play"]
+  fw.write(delim.join(keys) + "\n")
   for l in fr.readlines(): # for each game, parse play-by-play
     l = l.split("\t")
     date = l[0].replace("-","")
@@ -91,13 +91,11 @@ def writePlays(season): # loop play-by-play parser over all games in a season
     playList = parsePlayList(date,teams) # get play list for this game
     playList = removeExtraRebs(playList) # remove, e.g., "Free Throw 1 of 2 Missed" -> "Team Rebound"
     for play in playList:
-      fw.write("\t".join(play) + "\n")
+      fw.write(delim.join(play) + "\n")
   fw.close()
 
-def main():
-  season = sys.argv[1]  
-#   season = "201415"
-  writePlays(season)
+def main(): 
+  writePlays(sys.argv[1], sys.argv[2])
 
 if __name__ == "__main__":
     main()
