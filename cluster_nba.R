@@ -15,7 +15,6 @@ vars = c("fgm", "fga", "X3pm", "X3pa", "ftm", "fta", "off", "def", "ast", "pf", 
 str(nba)
 
 # get average stat line for each player code...
-#stats = data.frame()
 players = levels(nba$player_code)
 players = subset(players, !(players=="total"))
 stats = data.frame()
