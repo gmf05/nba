@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # pulling nba play-by-play via xml to json
 #
 #
@@ -46,7 +47,6 @@ def writeplaysCSV(gamelist, playlist):
         # period stop (msg_type = 13)
         play = dat[0].text.strip()
         tm = ''
-        #print play # debug
         # which msg_type?
         if re.search("[Jj]ump [Bb]all", play):
           msg_type = 10
@@ -63,6 +63,7 @@ def writeplaysCSV(gamelist, playlist):
           game_time = "00:00.0"
           msg_type = 13
         I = [gameid, game[0], str(count), str(prd), str(msg_type), str(action_type), tm, str(vtms), str(htms), game_time, 'player_code', play]
+        #print play # debug
         fw.write(delim.join(I) + "\n")
       if len(dat)==2:
         # do nothing because table entries are just team names
@@ -80,7 +81,6 @@ def writeplaysCSV(gamelist, playlist):
           j=0
         # tm = away, j=1 ; tm = home, j=3      
         play = dat[j].text  
-        #print play # debug
         # is it a scoring play?
         if dat[1].attrs['class'][0]=="nbaGIPbPMidScore":
           temp = dat[1].text.split("[")[1].split("]")[0] # drop [ ] border
@@ -104,7 +104,7 @@ def writeplaysCSV(gamelist, playlist):
           msg_type = 4
         if re.search("[Tt]urnover", play):
           msg_type = 5
-        if re.search("[Ff]oul", play):
+        if re.search("[Ff]oul", pl  ay):
           msg_type = 6
         #if re.search("[kicked ball or goaltend or delay of game]", play):
         #  msg_type = 7
@@ -120,6 +120,7 @@ def writeplaysCSV(gamelist, playlist):
           msg_type = 18
         game_time = dat[1].text.split(" ")[0]
         I = [gameid, game[0], str(count), str(prd), str(msg_type), str(action_type), tm, str(vtms), str(htms), game_time, 'player_code', play]
+        #print play # debug
         fw.write(delim.join(I) + "\n")
         count+=1
         
