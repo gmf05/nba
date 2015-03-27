@@ -125,7 +125,7 @@ def writeplaysCSV(gamelist, playlist):
         
 def main():
     season_code = "00213" # 2013-14 regular season
-    #season_code = "00214" # 2014-15 regular season
+    season_code = "00214" # 2014-15 regular season
     gamelist = "games_" + season_code + ".csv"
     playlist = "plays_" + season_code + ".csv"
     writeplaysCSV(gamelist, playlist)

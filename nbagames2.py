@@ -52,13 +52,13 @@ def writeGamelist(season_code,startday,stopday):
   fw.close()
 
 def main():
-   #season_code = '00214' # 2014-15 regular season
-   #date1 = datetime.date(2014,10,28)
-   #date2 = datetime.date(2015,03,25)
+   season_code = '00214' # 2014-15 regular season
+   date1 = datetime.date(2014,10,28)
+   date2 = datetime.date(2015,03,25)
    
-   season_code = '00213' # 2013-14 regular season
-   date1 = datetime.date(2013,10,29)
-   date2 = datetime.date(2014,04,16)   
+   #season_code = '00213' # 2013-14 regular season
+   #date1 = datetime.date(2013,10,29)
+   #date2 = datetime.date(2014,04,16)   
 
    writeGamelist(season_code, date1, date2)
 

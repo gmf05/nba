@@ -139,7 +139,7 @@ def writeTeamTotals(gamelist, scorelist):
       temp = str(e.text)
       if temp=='&nbsp;':
         temp = ''          
-      if re.match("([\d]+)-([\d]+)", temp):     
+      if re.match("([\d]+)-([\d]+)", temp):
         temp = temp.split("-")
         for t in temp: I.append(t)
       else:
@@ -170,14 +170,16 @@ def writeTeamTotals(gamelist, scorelist):
 
 def main():
     season_code = "00213" # 2013-14 regular season
-    #season_code = "00214" # 2014-15 regular season
+    season_code = "00214" # 2014-15 regular season
     gamelist = "games_" + season_code + ".csv"
-    scorelist = "boxscores_" + season_code + ".csv"
+    scorelist = "scores_" + season_code + ".csv"
     writescoresCSV(gamelist, scorelist)
+    teamscorelist = "scores_team_" + season_code + ".csv"
+    writeTeamTotals(gamelist, teamscorelist)
 
 # boilerplate to run main on execution    
 if __name__ == "__main__":
     season_code = sys.argv[1]
     gamelist = "games_" + season_code + ".csv"
-    scorelist = "boxscores_" + season_code + ".csv"
+    scorelist = "scores_" + season_code + ".csv"
     writescoresCSV(gamelist, scorelist)
