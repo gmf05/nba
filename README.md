@@ -1,7 +1,7 @@
-sports
+nba analysis code
 ======
 
-Scripts for the collection and analysis of NBA play-by-play data.
+Scripts for the collection and analysis of NBA box score & play-by-play data.
 
 Data collection and formatting is divided into four Python scripts:
 
