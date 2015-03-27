@@ -16,4 +16,4 @@ Data collection and formatting is divided into four Python scripts:
 
 Further point process analysis is implemented through Matlab scripts and relies on the Point Process Toolbox (pp_tools) repo. This includes methods for data visualization, model estimation, model validation, etc.
 
-Other learning methods are implemented in R scripts (fit_nba*.R) and include logistic regression, decision trees, and K-nearest neighbors.
+Other learning methods are implemented in R scripts and include logistic regression, decision trees, K-nearest neighbors, and K-means clustering.
