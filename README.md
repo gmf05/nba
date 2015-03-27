@@ -13,6 +13,7 @@ Data collection and output is divided into four Python scripts:
 
 4. nbastats.py : Given a list of play-by-play data, convert certain events (shots attempted/made, fouls, turnovers) into point process data (i.e. list of binary outcomes over time [0 0 0 0 1 ...])
 
+Currently output is in CSV format with example files provided.
 
 Further point process analysis is implemented through Matlab scripts and relies on the Point Process Toolbox (pp_tools) repo. This includes methods for data visualization, model estimation, model validation, etc.
 
