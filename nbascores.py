@@ -171,7 +171,7 @@ def writeTeamTotals(gamelist, scorelist):
 
 def main():
     season_code = "00213" # 2013-14 regular season
-    season_code = "00214" # 2014-15 regular season
+    #season_code = "00214" # 2014-15 regular season
     gamelist = "games_" + season_code + ".csv"
     scorelist = "scores_" + season_code + ".csv"
     writescoresCSV(gamelist, scorelist)
