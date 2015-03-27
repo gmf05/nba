@@ -130,7 +130,7 @@ def main():
     playlist = "plays_" + season_code + ".csv"
     writeplaysCSV(gamelist, playlist)
 
-# boilerplate to run main on execution    
+# boilerplate to run on execution
 if __name__ == "__main__":
     season_code = sys.argv[1]
     gamelist = "games_" + season_code + ".csv"

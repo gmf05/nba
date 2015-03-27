@@ -54,11 +54,15 @@ def writescoresCSV(gamelist, scorelist):
     I = [gameid, game[0], teams[0], teams[1], teams[0]]
     entries = totalstats.find_all('td')
     I.append("total")
-    #I.append(re.search("/playerfile/(.+)/index.html", entries[0].find_all('a')[0].attrs['href']).groups(0)[0])
     for e in entries[1:]:
-      if e.text=='&nbsp;':
-        e.text = None
-      I.append(e.text)
+      temp = str(e.text)
+      if temp=='&nbsp;':
+        temp = ''          
+      if re.match("([\d]+)-([\d]+)", temp):
+        temp = temp.split("-")
+        for t in temp: I.append(t)
+      else:
+        I.append(temp)
     if len(I)==Ncols:
       fw.write(delim.join(I) + "\n")
     #
@@ -90,7 +94,6 @@ def writescoresCSV(gamelist, scorelist):
     I = [gameid, game[0], teams[0], teams[1], teams[1]]
     entries = totalstats.find_all('td')
     I.append("total")
-    #I.append(re.search("/playerfile/(.+)/index.html", entries[0].find_all('a')[0].attrs['href']).groups(0)[0])
     for e in entries[1:]:
       temp = str(e.text)
       if temp=='&nbsp;':
@@ -134,7 +137,6 @@ def writeTeamTotals(gamelist, scorelist):
     I = [gameid, game[0], teams[0], teams[1], teams[0]]
     entries = totalstats.find_all('td')
     I.append("total")
-    #I.append(re.search("/playerfile/(.+)/index.html", entries[0].find_all('a')[0].attrs['href']).groups(0)[0])
     for e in entries[1:]:
       temp = str(e.text)
       if temp=='&nbsp;':
@@ -154,7 +156,6 @@ def writeTeamTotals(gamelist, scorelist):
     I = [gameid, game[0], teams[0], teams[1], teams[1]]
     entries = totalstats.find_all('td')
     I.append("total")
-    #I.append(re.search("/playerfile/(.+)/index.html", entries[0].find_all('a')[0].attrs['href']).groups(0)[0])
     for e in entries[1:]:
       temp = str(e.text)
       if temp=='&nbsp;':
@@ -177,7 +178,7 @@ def main():
     teamscorelist = "scores_team_" + season_code + ".csv"
     writeTeamTotals(gamelist, teamscorelist)
 
-# boilerplate to run main on execution    
+# boilerplate to run on execution
 if __name__ == "__main__":
     season_code = sys.argv[1]
     gamelist = "games_" + season_code + ".csv"

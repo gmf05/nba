@@ -45,6 +45,7 @@ def writeGamelist(season_code,startday,stopday):
       except urllib2.HTTPError:
         pingflag = False
       except:
+        # debug
         print url
         print d
         print str(count)
@@ -62,6 +63,7 @@ def main():
 
    writeGamelist(season_code, date1, date2)
 
+# boilerplate to run on execution
 if __name__ == "__main__":
     season_code = sys.argv[1]
     # parse sys.argv[2] & sys.argv[3] for dates
