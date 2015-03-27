@@ -3,7 +3,7 @@ nba analysis code
 
 Scripts for the collection and analysis of NBA box score & play-by-play data.
 
-Data collection and formatting is divided into four Python scripts:
+Data collection and output is divided into four Python scripts:
 
 1. nbagames.py : Given a range of dates & season code (e.g. 00214 = 2014-15 regular season), formulates a text list of all NBA games in the range
 
