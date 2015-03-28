@@ -7,7 +7,7 @@ Data collection and output is divided into four Python scripts:
 
 1. nbagames.py : Given a range of dates & season code (e.g. 00214 = 2014-15 regular season), formulates a text list of all NBA games in the range
 
-2. nbascores.py : Given a list of games, queries NBA.com and writes box score data for each one. Also can query vegasinsider.com to get the money line for each game.
+2. nbascores.py : Given a list of games, queries NBA.com and writes box score data for each one. Also can query vegasinsider.com to get moneyline odds for each game.
 
 3. nbaplays.py : Given a list of games, queries NBA.com and writes play-by-play data for each one.
 
