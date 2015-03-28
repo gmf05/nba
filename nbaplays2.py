@@ -104,7 +104,7 @@ def writeplaysCSV(gamelist, playlist):
           msg_type = 4
         if re.search("[Tt]urnover", play):
           msg_type = 5
-        if re.search("[Ff]oul", pl  ay):
+        if re.search("[Ff]oul", play):
           msg_type = 6
         #if re.search("[kicked ball or goaltend or delay of game]", play):
         #  msg_type = 7
@@ -126,7 +126,7 @@ def writeplaysCSV(gamelist, playlist):
         
 def main():
     season_code = "00213" # 2013-14 regular season
-    season_code = "00214" # 2014-15 regular season
+    #season_code = "00214" # 2014-15 regular season
     gamelist = "games_" + season_code + ".csv"
     playlist = "plays_" + season_code + ".csv"
     writeplaysCSV(gamelist, playlist)

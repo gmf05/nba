@@ -27,5 +27,14 @@ stats = cbind(stats, players)
 names(stats) <- c(vars, "player_code")
 
 # cluster
-nbaClust = kmeans(stats[,vars], 5, iter.max=10, nstart=1)
-nbaClust
+nbaClust = kmeans(stats[,vars], 10, iter.max=20, nstart=1)
+
+## how many clusters is good?
+# bw = c()
+# for (k in seq(2,50)) {
+#   cl = kmeans(stats[,vars], k, iter.max=10, nstart=1)
+#   bw = c(bw, cl$tot.withinss)
+# }
+# cl$betweenss
+# plot(seq(2,50), bw, xlab="Number of clusters", ylab="Total within cluster distance")
+
