@@ -5,7 +5,7 @@ import re
 import urllib2
 import shutil
 from bs4 import BeautifulSoup # for parsing html
-
+import socks
 #delim = ","
 #score1 = "lines_00213.csv"
 #score2 = "lines2_00213.csv"
@@ -133,7 +133,7 @@ def writescoresCSV(gamelist, scorelist):
         player_code = 'player_code'
       I.append(player_code)
       for e in entries[1:]:
-        try:      
+        try:
           temp = str(e.text)
         except:
           temp = ''
@@ -144,8 +144,8 @@ def writescoresCSV(gamelist, scorelist):
           for t in temp: I.append(t)
         else:
           I.append(temp)
-      if len(I)==Ncols:
-        fw.write(delim.join(I) + "\n")        
+        if len(I)==Ncols:
+          fw.write(delim.join(I) + "\n")        
     # stat totals
     I = [gameid, game[0], teams[0], teams[1], teams[0]]
     entries = totalstats.find_all('td')
