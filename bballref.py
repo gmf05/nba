@@ -11,7 +11,7 @@ def writeBBrefGames(season_code):
         fr.readline() # throwaway line
     for r in fr.readlines():
         r = r.strip().split(",")
-        season_code = "002" + r[0]    
+        season_code = "002" + r[0]
         strt = r[1].split("/")
         stp = r[2].split("/")
         startday = datetime.date(int(strt[0]),int(strt[1]),int(strt[2]))
@@ -33,14 +33,15 @@ def writeBBrefGames(season_code):
                 if not re.search(".html\">", g):
                     url2 = "http://www.basketball-reference.com/boxscores/" + g + ".html"
                     ttl = urllib2.urlopen(url2).read().split("<title>")[1].split("</title>")[0]
-                    tm1 = re.search("(.+) at", ttl).groups()[0]
-                    tm2 = re.search("at (.*?) Box Score", ttl).groups()[0]
-                    if re.match("at ", tm2): tm2=tm2.split("at ")[1] # handling weird bug...
+                    tm1 = re.search("(.+) (at|vs)", ttl).groups()[0]
+                    tm2 = re.search("(at|vs) (.*?) Box Score", ttl).groups()[1]
+                    # handling weird bug:
+                    tm2 = tm2.split("at ")[0+bool(re.match("at ",tm2))].split("vs")[0+bool(re.match("vs ",tm2))]
                     gameid = diso + teamAbbrevs[tm1] + teamAbbrevs[tm2]
                     print gameid # debug
                     fw.write(gameid + delim + teamAbbrevs[tm1] + delim + teamAbbrevs[tm2] + "\n")
         fw.close()
-    
+
 
 def writeBBrefScores(season_code):
     fr = open("games_bbref_" + season_code + ".csv","r")
@@ -80,7 +81,7 @@ def writeBBrefScores(season_code):
             d.append(player_code)
             d.append('') # no position data
             for v in valind:
-                if v>0:
+                if v>0 and len(td)>2: # if player DNP len==2
                     d.append(td[v].text)
                 else:
                     d.append('')
@@ -102,7 +103,7 @@ def writeBBrefScores(season_code):
             d.append(player_code)
             d.append('') # no position data
             for v in valind:
-                if v>0:
+                if v>0 and len(td)>2: # if player DNP len==2
                     d.append(td[v].text)
                 else:
                     d.append('')
