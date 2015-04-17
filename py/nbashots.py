@@ -9,14 +9,14 @@ teamCodes = {'Atlanta Hawks':'ATL', 'Boston Celtics':'BOS', 'Brooklyn Nets':'BKN
 def writeShots():
   #fr = open("games_bbref_all.csv","r")
   calendarMonths = {'January':'01', 'February':'02', 'March':'03', 'April':'04', 'May':'05', 'June':'06', 'July':'07', 'August':'08', 'September':'09', 'October':'10', 'November':'11', 'December':'12'}
-  #id_start = 400578293
-  #id_end = 400579522
+  id_start = 400578293
+  id_end = 400579522
 #   id_start = 400488874
 #   id_end = 400490103
-  id_start = 400277722
-  id_end = 400278950
+  #id_start = 400277722
+  #id_end = 400278950
   season = str(2014)
-  fw = open("shots_test2.csv", "w")
+  fw = open("shots_test_new.csv", "w")
   keys = ['gameid','gameid_espn','season','away','home','team','player_code','prd','clock','pts','made','x','y','distance']
   fw.write(delim.join(keys) + '\n')
   for gameid_espn in range(id_start, id_end+1):
@@ -44,7 +44,7 @@ def writeShots():
         pts = 2
       prd = int(prd0) + 4*bool(re.search('OT', shot['d'])) # add 4 to periods if we are in OT
       shotI = [player_tm, player_code, str(prd), clock, str(pts), isMade, shot['x'], shot['y'], dist]
-      print delim.join(d) + delim + delim.join(shotI)
+      #print delim.join(d) + delim + delim.join(shotI) # debug
       fw.write(delim.join(d) + delim + delim.join(shotI) + '\n')
 
 def main():
