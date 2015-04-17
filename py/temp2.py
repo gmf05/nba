@@ -149,6 +149,3 @@ for t in teams:
     # get html, parse into advanced table box score
     # get table
 fw.close()
-
-
-

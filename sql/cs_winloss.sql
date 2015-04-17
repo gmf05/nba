@@ -11,8 +11,8 @@ select c.gamedate,o.opp,c.half,o.ohalf,c.total,o.ototal,(c.total>o.ototal) as wi
 select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date<20141219;
 select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date<20141219 and half>ohalf;
 select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date<20141219 and half<ohalf;
-select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date<20141219 and half>ohalf;
+select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date<20141219 and half=ohalf;
 select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date>=20141219;
 select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date>=20141219 and half>ohalf;
 select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date>=20141219 and half<ohalf;
-select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date>=20141219 and half>ohalf;
+select count(win) as W, count(gamedate)-sum(win) as L from Celtics15 where date>=20141219 and half=ohalf;
