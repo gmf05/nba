@@ -145,6 +145,34 @@ def writeTeamScores():
         fw.write(delim.join(r0) + '\n')      
     fw.close()
 
+def writeQtrScores():
+  for season_year in range(79,114):
+    season_code = '002' + str(season_year)
+    fr = open("games_bbref_" + season_code + ".csv","r")
+    fw = open("qtrscores_bbref_" + season_code + ".csv","w")
+    fr.readline() # throwaway line
+    delim = ","
+    keys = ['gameid','date','away','home','tm','q1','q2','q3','q4','ot1','ot2','ot3','total']
+    fw.write(delim.join(keys) + "\n")
+    for r in fr.readlines():
+      gameid,away,home = r.strip().split(delim)
+      gameid0 = gameid.replace(away, '0')
+      date = gameid[0:8]
+      print gameid # debug
+      url = "http://www.basketball-reference.com/boxscores/" + gameid0 + ".html"
+      html = urllib2.urlopen(url).read().replace('\n','').replace('\t','')
+      tab = html.split('<table class="nav_table stats_table">')[1].split("</table>")[0]
+      trs = BeautifulSoup(tab).find_all('tr')
+      #th = trs[1].find_all('th')[1:] # 1 is headers
+      for tr in trs[2:]: # 0 is blank, 1 is headers, 2 is away team, 3 is home team
+        tds = tr.find_all('td')
+        tr0 = [gameid, date, away, home]
+        [tr0.append(td.text) for td in tds[0:-1]]
+        [tr0.append('') for i in range(len(tds),9)] # append 0-3 blanks for OTs, 8 total score entries
+        tr0.append(tds[-1].text)
+        fw.write(delim.join(tr0) + "\n")
+    fw.close()
+
 def writeWinLoss():
   # repeat for standings table
   fw = open("test_standings.csv","w")
@@ -179,7 +207,68 @@ def writeWinLoss():
   fw.close()
 
 
-#def main():
-#        
-#if __name__ == "__main__":
-#    main()
+def writeAdvScores():
+  fr = open("games_bbref_red.csv","r") # advanced scores start in 1985 season
+  fw = open("advscores_bbref_all.csv","w")
+  fr.readline() # throwaway line
+  delim = ","
+  #valkeys = ['fgm','fga','3pm','3pa','ftm','fta','off','def','tot','ast','st','bs','to','pf','pts]    
+  #valind = [2,3,5,6,8,9,11,12,13,14,15,16,17,18,19]
+  keys = ['gameid','season','away','home','tm','player_code','min','tspct','efgpct','x3par','ftr','orebpct','drebpct','trebpct','astpct','stlpct','blkpct','tovpct','usgpct','ortg','drtg']
+  valind = range(2, len(keys)-5)
+  fw.write(delim.join(keys) + "\n")
+  for r in fr.readlines():
+    gameid,season,away,home = r.strip().split(delim)
+    gameid0 = gameid.replace(away, '0')
+    print gameid # debug
+    url = "http://www.basketball-reference.com/boxscores/" + gameid0 + ".html"
+    html = urllib2.urlopen(url).read()
+  
+    table1 = html.split("id=\"" + away + "_advanced\">")[1].split("</table>")[0]
+    tabrows1 = BeautifulSoup(table1).find_all('tr')
+    if int(season) >= 1985: # shouldn't matter for adv scores
+      I = range(2,7) + range(8, len(tabrows1)) # 7 = table headings if season >=1985
+    else:
+      I = range(2, len(tabrows1)) # no table headings if season < 1985
+      tm = away
+      for i in I:
+        td = tabrows1[i].find_all('td')
+        d = [gameid, season, away, home, tm]
+        player_code = td[0].text.lower().replace(' ','_').replace('.','') # needs work?
+        if player_code=='team_totals':
+          player_code='total'
+          d.append(player_code)
+          for v in valind:
+            if v>0 and len(td)>2: # if player DNP len==2
+              d.append(td[v].text)
+            else:
+              d.append('')
+          fw.write(delim.join(d) + "\n")
+      
+      table2 = html.split("id=\"" + home + "_advanced\">")[1].split("</table>")[0]    
+      tabrows2 = BeautifulSoup(table2).find_all('tr')
+      if int(season) >= 1985: # shouldn't matter for adv scores
+        I = range(2,7) + range(8, len(tabrows2)) # 7 = table headings if season >=1985
+      else:
+        I = range(2, len(tabrows2)) # no table headings if season < 1985
+      tm = home
+      for i in I:
+        td = tabrows2[i].find_all('td')
+        d = [gameid, season, away, home, tm]
+        player_code = td[0].text.lower().replace(' ','_').replace('.','') # needs work?
+        if player_code=='team_totals':
+          player_code='total'
+          d.append(player_code)
+          for v in valind:
+            if v>0 and len(td)>2: # if player DNP len==2
+              d.append(td[v].text)
+            else:
+              d.append('')
+          fw.write(delim.join(d) + "\n")
+  fw.close()
+
+def main():
+  writeQtrScores()        
+
+if __name__ == "__main__":
+    main()
