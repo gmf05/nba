@@ -461,11 +461,11 @@ def main():
   # set names of data files:
   #season_code = sys.argv[1]
   season_code = '00214' # 2014-15 regular season
-  gamelist_full = "games_" + season_code + ".csv"
-  gamelist_new = "games_latest_" + season_code + ".csv"
-  boxscorelist = "scores_" + season_code + ".csv"
-  scorelist = "scorelines_" + season_code + ".csv"
-  playlist = "plays_" + season_code + ".csv"
+  gamelist_full = "csv/games_" + season_code + ".csv"
+  gamelist_new = "csv/games_latest_" + season_code + ".csv"
+  boxscorelist = "csv/scores_" + season_code + ".csv"
+  scorelist = "csv/scorelines_" + season_code + ".csv"
+  playlist = "csv/plays_" + season_code + ".csv"
   # update game list, box scores, play-by-play with newest data  
   print "\n\nGetting latest games..."  
   latestGamelist(season_code, gamelist_full)

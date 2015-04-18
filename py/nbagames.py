@@ -109,7 +109,10 @@ def updateGamelist(season_code, gamelist):
         print str(count)
         break
   fw.close()
-  
+
+def writeGamelist2():
+  0    
+
 def main():
   #season_code = '00213' # 2013-14 regular season
   #date1 = datetime.date(2013,10,29)

@@ -149,3 +149,53 @@ for t in teams:
     # get html, parse into advanced table box score
     # get table
 fw.close()
+
+
+############
+# small function to convert gameid_espn to real gameids
+def espn_to_gameid(gameid_espn):
+  teamCodes = {'Atlanta Hawks':'ATL', 'Boston Celtics':'BOS', 'Brooklyn Nets':'BKN', 'Chicago Bulls':'CHI', 'Charlotte Hornets':'CHA', 'Charlotte Bobcats':'CHA', 'Cleveland Cavaliers':'CLE', 'Dallas Mavericks':'DAL', 'Denver Nuggets':'DEN', 'Detroit Pistons':'DET', 'Golden State Warriors':'GSW', 'Houston Rockets':'HOU', 'Indiana Pacers':'IND', 'Los Angeles Clippers':'LAC', 'Los Angeles Lakers':'LAL', 'Memphis Grizzlies':'MEM', 'Miami Heat':'MIA', 'Milwaukee Bucks':'MIL', 'Minnesota Timberwolves':'MIN', 'New Orleans Pelicans':'NOP', 'New York Knicks':'NYK', 'Oklahoma City Thunder':'OKC', 'Orlando Magic':'ORL', 'Philadelphia 76ers':'PHI', 'Phoenix Suns':'PHX', 'Portland Trail Blazers':'POR', 'Sacramento Kings':'SAC', 'San Antonio Spurs':'SAS', 'Toronto Raptors':'TOR', 'Utah Jazz':'UTA', 'Washington Wizards':'WAS', 'New Jersey Nets':'NJN', 'New Orleans Hornets':'NOH', 'Washington Bullets':'WSB', 'Kansas City Kings':'KCK', 'San Diego Clippers':'SDC', 'Seattle SuperSonics':'SEA', 'Vancouver Grizzlies':'VAN', 'New Orleans/Oklahoma City Hornets':'NOK', 'League Average':'AVG'}
+  calendarMonths = {'January':'01', 'February':'02', 'March':'03', 'April':'04', 'May':'05', 'June':'06', 'July':'07', 'August':'08', 'September':'09', 'October':'10', 'November':'11', 'December':'12'}
+  #gameid_espn = str(gameid_espn) # if necessary
+  url = 'http://espn.go.com/nba/boxscore?gameId=' + gameid_espn
+  html = urllib2.urlopen(url).read()
+  awayLong,homeLong,month,day,year = re.search('statistics from the (.+) vs. (.+) game played on (.+) (\d+), (\d+)', html).groups()
+  away = teamCodes[awayLong]
+  home = teamCodes[homeLong]
+  date = year + calendarMonths[month] + day
+  print date + away + home  
+  return date + away + home
+
+# loop to save gameid_espn as real gameids
+teamCodes = {'Atlanta Hawks':'ATL', 'Boston Celtics':'BOS', 'Brooklyn Nets':'BKN', 'Chicago Bulls':'CHI', 'Charlotte Hornets':'CHA', 'Charlotte Bobcats':'CHA', 'Cleveland Cavaliers':'CLE', 'Dallas Mavericks':'DAL', 'Denver Nuggets':'DEN', 'Detroit Pistons':'DET', 'Golden State Warriors':'GSW', 'Houston Rockets':'HOU', 'Indiana Pacers':'IND', 'Los Angeles Clippers':'LAC', 'Los Angeles Lakers':'LAL', 'Memphis Grizzlies':'MEM', 'Miami Heat':'MIA', 'Milwaukee Bucks':'MIL', 'Minnesota Timberwolves':'MIN', 'New Orleans Pelicans':'NOP', 'New York Knicks':'NYK', 'Oklahoma City Thunder':'OKC', 'Orlando Magic':'ORL', 'Philadelphia 76ers':'PHI', 'Phoenix Suns':'PHX', 'Portland Trail Blazers':'POR', 'Sacramento Kings':'SAC', 'San Antonio Spurs':'SAS', 'Toronto Raptors':'TOR', 'Utah Jazz':'UTA', 'Washington Wizards':'WAS', 'New Jersey Nets':'NJN', 'New Orleans Hornets':'NOH', 'Washington Bullets':'WSB', 'Kansas City Kings':'KCK', 'San Diego Clippers':'SDC', 'Seattle SuperSonics':'SEA', 'Vancouver Grizzlies':'VAN', 'New Orleans/Oklahoma City Hornets':'NOK', 'League Average':'AVG'}
+calendarMonths = {'January':'01', 'February':'02', 'March':'03', 'April':'04', 'May':'05', 'June':'06', 'July':'07', 'August':'08', 'September':'09', 'October':'10', 'November':'11', 'December':'12'}
+season = str(2014)
+fw = open("espn_gameids_new.csv", "w")
+keys = ['gameid_espn', 'gameid']
+fw.write(delim.join(keys) + '\n')
+#id_start = 400578293 # 2014-15
+#id_end = 400579522 # 2014-15
+#id_start = 400488874 # 2013-14
+#id_end = 400490103 # 2013-14
+id_start = 400277722 # 2012-13
+id_end = 400278950 # 2012-13
+for gameid_espn in range(id_start, id_end+1):
+  gameid_espn = str(gameid_espn)
+  fw.write( delim.join([gameid_espn, espn_to_gameid(gameid_espn)]) + '\n' )
+fw.close()
+
+
+###
+fr = open("csv/shots_00214.csv")
+fr.readline()
+fw = open("temp/shots_test.csv","w")
+[fw.write(delim.join(r.split(delim)[-5:])) for r in fr.readlines()]
+fw.close()
+
+
+
+##
+
+for date in datelist:
+  url = 'http://data.nba.com/5s/json/cms/noseason/scoreboard/' + date + '/games.json'
+  jsn = json.loads(urllib2.urlopen(url).read())

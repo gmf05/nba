@@ -92,3 +92,24 @@ out = "{\n\t\"data\": [\n\t\t" + ",\n\t\t".join([json.dumps(row) for row in read
 jsonfile = open('test2.json', 'w')
 jsonfile.write(out)
 jsonfile.close()
+
+#
+fw = open('csv/qtrscores_bbref_all.csv','w')
+fr = open('csv/qtrscores_bbref_00279.csv', 'r')
+r = fr.readline()
+r0 = r.split(delim)
+r0.insert(1, 'season')
+r0.insert(-1,'ot4')
+r0.insert(-1,'ot5')
+fw.write(delim.join(r0))
+ncol = len(r0)
+for season_year in range(1979,2015):
+  yr = str(season_year)[2:]
+  fr = open('csv/qtrscores_bbref_002' + yr + '.csv', 'r')
+  fr.readline()
+  for r in fr.readlines():
+    r0 = r.split(delim)
+    r0.insert(1, str(season_year))
+    while len(r0)<ncol: r0.insert(-1, '')
+    fw.write(delim.join(r0))
+fw.close()
