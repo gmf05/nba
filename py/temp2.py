@@ -185,17 +185,13 @@ for gameid_espn in range(id_start, id_end+1):
 fw.close()
 
 
-###
-fr = open("csv/shots_00214.csv")
-fr.readline()
+### concatenate shot lists for matlab analysis
 fw = open("temp/shots_test.csv","w")
-[fw.write(delim.join(r.split(delim)[-5:])) for r in fr.readlines()]
+for n in range(4, 15):
+  print str(n).zfill(2)
+  if n!=11:
+    fr = open("csv/shots_002" + str(n).zfill(2) + ".csv")
+    fr.readline()
+    [fw.write(delim.join(r.split(delim)[-5:])) for r in fr.readlines()]
 fw.close()
 
-
-
-##
-
-for date in datelist:
-  url = 'http://data.nba.com/5s/json/cms/noseason/scoreboard/' + date + '/games.json'
-  jsn = json.loads(urllib2.urlopen(url).read())
