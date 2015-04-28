@@ -13,7 +13,9 @@ if __name__ == '__main__':
   sc_url = 'http://stats.nba.com/stats/shotchartdetail?Season=&SeasonType=Regular+Season&LeagueID=00&TeamID=0&PlayerID=0&GameID=*GAMEID*&Outcome=&Location=&Month=0&SeasonSegment=&DateFrom=&DateTo=&OpponentTeamID=0&VsConference=&VsDivision=&Position=&RookieYear=&GameSegment=&Period=0&LastNGames=0&ContextFilter=&ContextMeasure=FG_PCT&zone-mode=basic&viewShots=true'
   # Box Score. Works for historic games back to 1949+    
   bs_url = 'http://stats.nba.com/stats/boxscore?GameID=*GAMEID*&RangeType=0&StartPeriod=0&EndPeriod=0&StartRange=0&EndRange=0&playbyplay=undefined'
-
+  # SportVu Data. Works for most games in 2014-15, not sure about 2013-14
+  sv_url = 'http://stats.nba.com/stats/locations_getmoments/?eventid=337&gameid=*GAMEID*'
+  
   season_code = sys.argv[1]
   #season_code = '00214'
   
@@ -46,3 +48,11 @@ if __name__ == '__main__':
     j = json.loads(urllib2.urlopen(pbp_url.replace('*GAMEID*', gameid)).read())['resultSets'][0]
     fw.write(j)
     fw.close()
+    #
+    try:
+      fw = open("json/sv_" + gameid + ".json", "w")
+      fw.write(urllib2.urlopen(sv_url.replace('*GAMEID*', gameid)).read())
+      fw.close()
+    except urllib2.HTTPError:
+      print "SportVU not available for " + gameid
+      0 # Do nothing if sportvu data is not available
