@@ -1,4 +1,4 @@
-# Scripts to scrape and analyze box scores, play-by-play, and shot charts from NBA.com.
+# Scripts to scrape and analyze data from NBA.com.
 
 
 Data collection is done via savejson.py, which can be run via the command line:
