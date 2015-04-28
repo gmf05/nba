@@ -8,17 +8,17 @@ Data collection is done via savejson.py, which can be run via the command line:
 
 This example gets regular season data for the 2014-15 season. For each game, it creates 3 JSON files:
 
-    bs_GAMEID.json -- Box score
-    pbp_GAMEID.json -- Play-by-play
-    shots_GAMEID.json -- Shot chart
+    bs_GAMEID.json : Box score
+    pbp_GAMEID.json : Play-by-play
+    shots_GAMEID.json : Shot chart
   
 
 GAMEID is a 10-digit code: XXXYYGGGGG where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season). Season prefixes are...
 
-    001 = Pre Season
-    002 = Regular Season
-    003 = All-Star
-    004 = Post Season
+    001 : Pre Season
+    002 : Regular Season
+    003 : All-Star
+    004 : Post Season
 
 
 See folder json for sample data.
