@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # get JSON from NBA.com -> raw text
 import urllib2 # query web
 import json # parse json
