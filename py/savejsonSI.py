@@ -51,7 +51,7 @@ if __name__ == '__main__':
   id_file.write(','.join(['dataid', 'gameid']) + '\n')
   
   ## loop over games, collect data
-  for dataid in idlist0:
+  for dataid in idlist:
     # load json for given game
     j = json.loads(urllib2.urlopen(data_url.replace('*DATAID*', dataid)).read())
     game = j['apiResults'][0]['league']['season']['eventType'][0]['events'][0]
