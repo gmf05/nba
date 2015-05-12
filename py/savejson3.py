@@ -20,42 +20,38 @@ if __name__ == '__main__':
   # SportVu Data. Works for most games in 2014-15, not sure about 2013-14
   #sv_url = 'http://stats.nba.com/stats/locations_getmoments/?eventid=1&gameid=*GAMEID*'
 
-  season_code = sys.argv[1]
+  #season_code = sys.argv[1]
   #season_code = '00214'
-  
-  # get number of games in given season
-  fr = open("/home/gmf/Code/repos/nba/csv/ngames_season.csv","r")
-  fr.readline() # drop headers    
-  endid = None
-  for r in fr.readlines():
-    season,ngames = r.strip().split(',')
-    if season[-2:]==season_code[-2:]:
-        endid = int(ngames)
-        break
-  
-  # loop over games, collect data
-  #for gamenum in range(1,endid+1):
-  for gamenum in range(101,105):
-    #
-    gameid = season_code + str(gamenum).zfill(5)
-    print gameid # debug
-    #
-    fw = open(JSONPATH + "/pbp_" + gameid + ".json", "w")
-    pbp_params['GameID'] = gameid    
-    j = requests.get(pbp_url, params=pbp_params).json()['resultSets'][0]
-    json.dump(j, fw)    
-    fw.close()
-    #
-    fw = open(JSONPATH + "/shots_" + gameid + ".json", "w")    
-    sc_params['GameID'] = gameid
-    sc_params['SeasonType'] = 'Playoffs'
-    j = requests.get(sc_url, params=sc_params).json()['resultSets'][0]
-    json.dump(j, fw)
-    fw.close()
-    #
-    fw = open(JSONPATH + "/bs_" + gameid + ".json", "w")    
-    bs_params['GameID'] = gameid
-    j = requests.get(bs_url, params=bs_params).json()['resultSets']
-    json.dump(j, fw)
-    fw.close()    
-    
+  for y in range(2007, 2008):
+    season_code = '004' + str(y)[2:]
+    # get number of games in given season
+    fr = open("/home/gmf/Code/repos/nba/csv/playoffs_" + season_code + ".csv","r")
+    fr.readline() # drop headers
+    for r in fr.readlines():
+      #
+      gameid = r.split(',')[0]
+      #gameid = season_code + str(gamenum).zfill(5)
+      print gameid # debug
+      try:
+        #
+        fw = open(JSONPATH + "/pbp_" + gameid + ".json", "w")
+        pbp_params['GameID'] = gameid    
+        j = requests.get(pbp_url, params=pbp_params).json()['resultSets'][0]
+        json.dump(j, fw)    
+        fw.close()
+        #
+        fw = open(JSONPATH + "/shots_" + gameid + ".json", "w")    
+        sc_params['GameID'] = gameid
+        sc_params['SeasonType'] = 'Playoffs'
+        j = requests.get(sc_url, params=sc_params).json()['resultSets'][0]
+        json.dump(j, fw)
+        fw.close()
+        #
+        fw = open(JSONPATH + "/bs_" + gameid + ".json", "w")    
+        bs_params['GameID'] = gameid
+        j = requests.get(bs_url, params=bs_params).json()['resultSets']
+        json.dump(j, fw)
+        fw.close()    
+      except:
+        0
+      

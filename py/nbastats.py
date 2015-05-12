@@ -229,7 +229,7 @@ def ppShots(shotList,games,secPerGame):
     ind = 2*(s[2]==3)
     t = sumSec[game]+s[1]-1
     shots[ind,t] = 1
-    if s[3]:      
+    if s[3]:
       shots[ind+1,t] = 1
   return shots
 
