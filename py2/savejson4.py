@@ -12,7 +12,7 @@ import json # parse json
 import datetime # useful for making lists of days between dates
 
 # Where should the output files be saved?
-NBAPATH = '/home/gfiddy/' # <<<< CHANGE THIS FOR YOUR SYSTEM!!
+NBAPATH = '/home/gmf/' # <<<< CHANGE THIS FOR YOUR SYSTEM!!
 
 # Base URLs
 # Play by Play. Works for 1996-97 onward    
@@ -73,7 +73,7 @@ fr.readline() # drop headers
 
 # 2b. Pull JSON data [play by play, shot chart, box score] for each game!
 for r in fr.readlines():
-  gameid = r.split(',')[0]
+  gameid = r.split(delim)[0]
   print gameid # debug
   try:
     # Get play by play (pbp)
