@@ -137,7 +137,7 @@ def getLine2(gameid):
 # Loop over games, get odds
 fw.write(delim.join(['gameid','away','home','line_away','line_home']) + '\n')
 for r in fr.readlines():
-  junk,gameid_simple,away,home = r.split(delim)
+  junk,gameid_simple,away,home = r.strip().split(delim)
   print gameid_simple # debug
   try:
     l1,l2 = getLine(gameid_simple)
