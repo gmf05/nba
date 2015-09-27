@@ -15,7 +15,7 @@ For each game, four JSON files are created:
     shots_GAMEID.json : Shot chart
     sv_GAMEID.json : SportVu data (if available/selected)
 
-where GAMEID is a 10-digit code. XXXYYGGGGG where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season). Season prefixes are...
+where GAMEID is a 10-digit code, XXXYYGGGGG, where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season). Season prefixes are...
 
     001 : Pre Season
     002 : Regular Season
