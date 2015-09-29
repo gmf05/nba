@@ -36,4 +36,4 @@ Older data collection scripts parse HTML (using modules re, BeautifulSoup, etc.)
 
 =======
 
-Analysis scripts apply machine learning techniques to the resulting data in Python, Matlab, and R. Some simple examples are shown in iPython Notebooks.
+Analysis scripts apply machine learning techniques to the resulting data in Python, Matlab, and R. Some simple examples are shown in IPython Notebooks.
