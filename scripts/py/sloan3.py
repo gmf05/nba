@@ -38,6 +38,9 @@ pbp = get_pbp(gameid)
 boxscore = get_boxscore(gameid)
 shots = get_shots(gameid)
 
+
+
+
 def get_sportvu(gameid,eventnum):
   #
   # Important to remember: Event number indexing in play-by-play begins at 1!
@@ -105,6 +108,15 @@ def get_team_games(team, seasonid='00214'):
   gameids = np.concatenate((np.flatnonzero(D.home==team), np.flatnonzero(D.away==team)))
   return D.gameid_num.iloc[gameids].values
 
+# Helper function to draw circles
+theta = np.arange(0,2*np.pi,0.3)
+def draw_circ(x0, y0, color='b'):
+  R = 1.8
+  xs = x0 + R*np.cos(theta)
+  ys = y0 + R*np.sin(theta)
+  plt.fill(xs,ys,color=color)
+  return xs, ys
+
 # Draw court.
 # SIMPLE VERSION, IMAGE BASED
 def draw_court(axis):
@@ -112,46 +124,9 @@ def draw_court(axis):
   img = mpimg.imread(NBAHOME + '/image/nba_court_T.png')
   plt.imshow(img,extent=axis, zorder=0)
 
-def init():
-  # Draw court & zoom out slightly to give light buffer
-  draw_court([xmin,xmax,ymin,ymax]) 
-  for i in range(3): info_text[i].set_text('')
-  for i in range(10): 
-    player_text[i].set_text('')
-    ax.add_patch(player_circ[i])
-  ax.add_patch(ball_circ)
-  ax.axis('off')
-  dx = 5
-  plt.xlim([xmin-dx,xmax+dx]) 
-  plt.ylim([ymin-dx,ymax+dx])  
-  plt.title(play_description)  
-  return tuple(info_text) + tuple(player_text) + tuple(player_circ) + (ball_circ,)
-
-# Animation function / loop
-def animate(n):
-  # 1. Draw players by team, with jersey numbers
-  for i in range(10):
-    if i<5:
-      col='b'
-    else:
-      col='r'
-    player_circ[i].center = (sv.iloc[n].playerx[i], sv.iloc[n].playery[i])
-    player_text[i].set_text(sv.iloc[n].playernum[i])
-    player_text[i].set_x(sv.iloc[n].playerx[i])
-    player_text[i].set_y(sv.iloc[n].playery[i])
-  # 2. Draw ball
-  ball_circ.center = (sv.iloc[n].ballx, sv.iloc[n].bally)
-  # Fluctuate ball radius to indicate Z position : helpful for shots
-  ball_circ.radius = 1 + sv.iloc[n].ballz/17*2
-  #
-  # 3. Print game clock info
-  info_text[0].set_text(str(sv.iloc[n].period))
-  info_text[1].set_text(str(sv.iloc[n].sec_remain))
-  info_text[2].set_text(str(sv.iloc[n].shotclock_remain))
-  #
-  plt.show()
-  plt.pause(0.01) # Uncomment to watch movie as it's being made
-  return tuple(info_text) + tuple(player_text) + tuple(player_circ) + (ball_circ,)
+# given gameid, get pp rebounds for that game ...?  
+#get_reb_pp(gameid):
+#  0
 
 #%% Plotting players & ball as 2D movie!
 
@@ -164,11 +139,10 @@ ax = plt.gca()
 #i2 = np.union1d(i0,i1)
 #eventnum=i2[0]
 eventnum = 5
-filename = 'test'
 
 # Get SportVu data & downsample
 sv = get_sportvu(gameid, eventnum)
-dn = 2 # downsampling, 1 for all frames
+dn = 5 # downsampling, 1 for all frames
 sv = sv.iloc[range(0, len(sv), dn)]
 
 # Court dimensions
@@ -221,6 +195,69 @@ for i in range(10):
   player_circ[i] = plt.Circle((0,0), R, color=col)
 ball_circ = plt.Circle((0,0), R, color=[1, 0.4, 0])
 
-# Play animation!
-ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=5, repeat=False)
-#ani.save('/home/gmf/%s.mp4' % filename, fps=10, extra_args=['-vcodec', 'libx264'])
+def init():
+
+
+  # Draw court & zoom out slightly to give light buffer
+  draw_court([xmin,xmax,ymin,ymax]) 
+  for i in range(3): info_text[i].set_text('')
+  for i in range(10): 
+    player_text[i].set_text('')
+    ax.add_patch(player_circ[i])
+  ax.add_patch(ball_circ)
+  ax.axis('off')
+  dx = 5
+  plt.xlim([xmin-dx,xmax+dx]) 
+  plt.ylim([ymin-dx,ymax+dx])  
+  plt.title(play_description)  
+  return tuple(info_text) + tuple(player_text) + tuple(player_circ) + (ball_circ,)
+
+# Animation function / loop
+def animate(n):
+  # 1. Draw players by team, with jersey numbers
+  for i in range(10):
+    if i<5:
+      col='b'
+    else:
+      col='r'
+    player_circ[i].center = (sv.iloc[n].playerx[i], sv.iloc[n].playery[i])
+    player_text[i].set_text(sv.iloc[n].playernum[i])
+    player_text[i].set_x(sv.iloc[n].playerx[i])
+    player_text[i].set_y(sv.iloc[n].playery[i])
+  # 2. Draw ball
+  ball_circ.center = (sv.iloc[n].ballx, sv.iloc[n].bally)
+  # Fluctuate ball radius to indicate Z position : helpful for shots
+  ball_circ.radius = 1 + sv.iloc[n].ballz/17*2
+  #
+  # 3. Print game clock info
+  info_text[0].set_text(str(sv.iloc[n].period))
+  info_text[1].set_text(str(sv.iloc[n].sec_remain))
+  info_text[2].set_text(str(sv.iloc[n].shotclock_remain))
+  #
+  plt.show()
+  plt.pause(0.01) # Uncomment to watch movie as it's being made
+  return tuple(info_text) + tuple(player_text) + tuple(player_circ) + (ball_circ,)
+
+#%% Animate without saving:
+#plt.figure(figsize=(15,7.5))
+init()
+for n in range(len(sv)): animate(n)
+
+#%% Trying to save....
+
+eventnum = 4
+filename = 'test'
+#anim = manimation.FuncAnimation(fig, animate, frames=20, blit=False, repeat=False, interval=2)
+ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=10)
+ani.save('/home/gmf/%s.mp4' % filename, fps=10, extra_args=['-vcodec', 'libx264'])
+
+#%% Find z range
+zmin = 1e3
+zmax = -1e3
+for n in range(100):
+  try:
+    sv = get_sportvu(gameid,n)
+    zmin = np.min([zmin, np.min(sv.ballz)])
+    zmax = np.max([zmax, np.max(sv.ballz)])
+  except:
+    0
