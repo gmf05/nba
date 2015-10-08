@@ -1,32 +1,30 @@
 # Scripts to scrape and analyze basketball data.
 
+Sample data available at the URL provided in the repo!
 
-Data collection is done via savejson.py, which can be run via the command line:
+Scripts perform data scraping of various websites and run machine learning methods on the resulting data.
+
+Most recent data collection scripts pull JSON (using the requests module) via the NBA's API. For instance, this simple call gets regular season data for the 2014-15 season:
   
     python savejson.py 00214
-  
 
-This example gets regular season data for the 2014-15 season. For each game, it creates 4 JSON files:
+For each game, four JSON files are created:
 
     bs_GAMEID.json : Box score
     pbp_GAMEID.json : Play-by-play
     shots_GAMEID.json : Shot chart
-    sv_GAMEID.json : SportVu data (if available)
-  
+    sv_GAMEID.json : SportVu data (if available/selected)
 
-GAMEID is a 10-digit code: XXXYYGGGGG where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season). Season prefixes are...
+where GAMEID is a 10-digit code, XXXYYGGGGG, where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season). Season prefixes are...
 
     001 : Pre Season
     002 : Regular Season
     003 : All-Star
     004 : Post Season
-
-
-See folder json for sample data.
-
+    
 =======
 
-Older data collection scripts parse HTML into CSV and include:
+Older data collection scripts parse HTML (using modules re, BeautifulSoup, etc.) into CSV and include:
 
 1. nbagames.py : Given a range of dates & season code (e.g. 00214 = 2014-15 regular season), formulates a text list of all NBA games in the range
 
@@ -38,6 +36,4 @@ Older data collection scripts parse HTML into CSV and include:
 
 =======
 
-Point process analysis is implemented in Matlab scripts and relies on the Point Process Toolbox (pp_tools) repo. This includes methods for data visualization, model estimation, model validation, etc.
-
-Other learning methods are implemented in R scripts and include logistic regression, decision trees, K-nearest neighbors, and K-means clustering.
+Analysis scripts apply machine learning techniques to the resulting data in Python, Matlab, and R. Some simple examples are shown in IPython Notebooks.
