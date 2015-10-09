@@ -136,7 +136,7 @@ def animate(n):
     else:
       col='r'
     player_circ[i].center = (sv.iloc[n].playerx[i], sv.iloc[n].playery[i])
-    player_text[i].set_text(sv.iloc[n].playernum[i])
+    player_text[i].set_text(str(sv.iloc[n].playernum[i]))
     player_text[i].set_x(sv.iloc[n].playerx[i])
     player_text[i].set_y(sv.iloc[n].playery[i])
   # 2. Draw ball
@@ -155,15 +155,12 @@ def animate(n):
 
 #%% Plotting players & ball as 2D movie!
 
-plt.close('all')
-fig = plt.figure(figsize=(15,7.5))
-ax = plt.gca()
 
 # Event number
 #i0,i1 = get_reb_eventnum(gameid)
 #i2 = np.union1d(i0,i1)
 #eventnum=i2[0]
-eventnum = 5
+eventnum = 3
 filename = 'test'
 
 # Get SportVu data & downsample
@@ -171,24 +168,15 @@ sv = get_sportvu(gameid, eventnum)
 dn = 2 # downsampling, 1 for all frames
 sv = sv.iloc[range(0, len(sv), dn)]
 
+plt.close('all')
+fig = plt.figure(figsize=(15,7.5))
+ax = plt.gca()
+
 # Court dimensions
 xmin = 0
 xmax = 100
 ymin = 0
 ymax = 50
-
-info_text = range(3)
-info_text[0] = ax.text(0, -5, '')
-info_text[1] = ax.text(5, -5, '')
-info_text[2] = ax.text(20, -5, '')
-
-
-# SportVu start/stop times & time axis for given event number
-#tstart = sv.sec_remain.iloc[0]
-#tend =sv.sec_remain.iloc[-1]
-#nsec = tend - tstart
-#time = np.linspace(0,nsec,num=len(sv))
-#nbins = len(time)
 
 # Play-by-Play data for given event num
 # TO DO: DON'T GET INDEX I -- GET CLOSEST TO CURRENT TIME!!
@@ -198,6 +186,13 @@ if playi.HOMEDESCRIPTION.values[0]:
   play_description = str(playi.HOMEDESCRIPTION.values[0])
 else:
   play_description = str(playi.VISITORDESCRIPTION.values[0])
+
+# SportVu start/stop times & time axis for given event number
+#tstart = sv.sec_remain.iloc[0]
+#tend =sv.sec_remain.iloc[-1]
+#nsec = tend - tstart
+#time = np.linspace(0,nsec,num=len(sv))
+#nbins = len(time)
 
 ## Get Shot information for given event???
 #shots = get_shots(gameid)
@@ -209,6 +204,10 @@ else:
 ##
 
 # Animated elements
+info_text = range(3)
+info_text[0] = ax.text(0, -5, '')
+info_text[1] = ax.text(5, -5, '')
+info_text[2] = ax.text(20, -5, '')
 player_text = range(10)
 player_circ = range(10)
 R=2.2
@@ -224,3 +223,71 @@ ball_circ = plt.Circle((0,0), R, color=[1, 0.4, 0])
 # Play animation!
 ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=5, repeat=False)
 #ani.save('/home/gmf/%s.mp4' % filename, fps=10, extra_args=['-vcodec', 'libx264'])
+
+
+#%%
+
+plt.close('all')
+fig = plt.figure(figsize=(15,7.5))
+ax = plt.gca()
+ax.axis('off')
+
+for eventnum in range(50,100):
+  # Get SportVu data & downsample
+  sv = get_sportvu(gameid, eventnum)
+  dn = 2 # downsampling, 1 for all frames
+  sv = sv.iloc[range(0, len(sv), dn)]
+      
+  # Court dimensions
+  xmin = 0
+  xmax = 100
+  ymin = 0
+  ymax = 50
+  
+  # Play-by-Play data for given event num
+  # TO DO: DON'T GET INDEX I -- GET CLOSEST TO CURRENT TIME!!
+  playi = pbp.iloc[np.flatnonzero(pbp.EVENTNUM==eventnum)]
+  #treb = playi.PCTIMESTRING.values[0]
+  if playi.HOMEDESCRIPTION.values[0]:
+    play_description = str(playi.HOMEDESCRIPTION.values[0])
+  else:
+    play_description = str(playi.VISITORDESCRIPTION.values[0])
+  
+  # SportVu start/stop times & time axis for given event number
+  #tstart = sv.sec_remain.iloc[0]
+  #tend =sv.sec_remain.iloc[-1]
+  #nsec = tend - tstart
+  #time = np.linspace(0,nsec,num=len(sv))
+  #nbins = len(time)
+  
+  ## Get Shot information for given event???
+  #shots = get_shots(gameid)
+  #shots_missed = shots.iloc[ np.flatnonzero( 1 - shots.SHOT_MADE_FLAG ) ]
+  ## for any play-by-play rebound event, get nearest preceding miss!
+  ## NOTE: need to modify GAME_EVENT_ID : should not be equal to i!
+  ## should be last number that's < i!
+  #shot = shots_missed.iloc[ np.flatnonzero(shots_missed.GAME_EVENT_ID == i) ]
+  ##
+  
+  # Animated elements
+  info_text = range(3)
+  info_text[0] = ax.text(0, -5, '')
+  info_text[1] = ax.text(5, -5, '')
+  info_text[2] = ax.text(20, -5, '')
+  player_text = range(10)
+  player_circ = range(10)
+  R=2.2
+  for i in range(10): 
+    player_text[i] = ax.text(0,0,'',color='w',ha='center',va='center')
+    if i<5:
+      col='b'
+    else:
+      col='r'
+    player_circ[i] = plt.Circle((0,0), R, color=col)
+  ball_circ = plt.Circle((0,0), R, color=[1, 0.4, 0])
+  
+  # Play animation!
+  ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=5, repeat=False)
+  #ani.save('/home/gmf/%s.mp4' % filename, fps=10, extra_args=['-vcodec', 'libx264'])
+  plt.pause(2)
+  plt.clf()
