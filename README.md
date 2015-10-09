@@ -1,27 +1,28 @@
 # Scripts to scrape and analyze basketball data.
 
-Sample data available at the URL provided in the repo!
+Scripts scrape NBA.com, Sports Illustrated, etc. for various data and run machine learning methods on the resulting data.
 
-Scripts perform data scraping of various websites and run machine learning methods on the resulting data.
-
-Most recent data collection scripts pull JSON (using the requests module) via the NBA's API. For instance, this simple call gets regular season data for the 2014-15 season:
+Newest data collection scripts, savejson.py and others, pull JSON (using the requests module) via the NBA API. For instance, this simple call gets regular season data for the 2014-15 season:
   
     python savejson.py 00214
 
-For each game, four JSON files are created:
+For each game, up to four JSON files are created:
 
     bs_GAMEID.json : Box score
     pbp_GAMEID.json : Play-by-play
     shots_GAMEID.json : Shot chart
-    sv_GAMEID.json : SportVu data (if available/selected)
+    sv_GAMEID.json : SportVu data (if available/selected. *WARNING*: These are sampled at 25 Hz & sometimes redundant, therefore somewhat large : ~100 GB for an entire regular season.
 
-where GAMEID is a 10-digit code, XXXYYGGGGG, where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season). Season prefixes are...
+GAMEID is a 10-digit code used by the NBA: XXXYYGGGGG, where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season).
+Season prefixes are...
 
     001 : Pre Season
     002 : Regular Season
     003 : All-Star
     004 : Post Season
-    
+
+Sample data collected using savejson are available at the url listed in the repo. By downloading, SportVu & play-by-play data for game '0021400001' (the first game of the 2014-15 regular season : ORL @ NOP 10/28/2014), one can reproduce the movie rebound1.mp4.
+
 =======
 
 Older data collection scripts parse HTML (using modules re, BeautifulSoup, etc.) into CSV and include:
