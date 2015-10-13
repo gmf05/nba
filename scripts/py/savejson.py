@@ -42,7 +42,7 @@ def write_game(gameid):
   pbp = requests.get(pbp_url, params=pbp_params).json()['resultSets'][0]
   json.dump(pbp, f)    
   f.close()
-  #  
+  # 
   # Shot chart
   #
   print 'Game %s, shot chart' % gameid
@@ -81,23 +81,20 @@ def write_game(gameid):
       errlist.append(str(eventid))
       print "Error on " + str(eventid)
   
-def write_season(season_code):
+def write_gamelist(gamelist):
   # get number of games in given season
-  fr = open('%s/csv/ngames_season.csv' % DATAPATH2, 'r')
-  fr.readline() # drop headers    
-  endid = None
-  for r in fr.readlines():
-    season,ngames = r.strip().split(',')
-    if season[-2:]==season_code[-2:]:
-        endid = int(ngames)
-        break  
-  for gamenum in range(1,endid+1):
-    gameid = season_code + str(gamenum).zfill(5)
+  #get startday, stopday
+  # run nbagames3.py -> make game list
+  # for each game in gamelist...
+  f = open(gamelist, 'r')
+  f.readline() # drop headers    
+  for r in f.readlines():
+    gameid = r.split(',')[0]
     write_game(gameid)
-    
+
 if __name__ == '__main__': 
   #write_game(sys.argv[1]) 
-  write_season(sys.argv[1]) 
+  write_gamelist(sys.argv[1]) 
   
   
   
