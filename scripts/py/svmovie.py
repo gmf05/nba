@@ -150,7 +150,7 @@ def animate(n):
   info_text[2].set_text(str(sv.iloc[n].shotclock_remain))
   #
   plt.show()
-  plt.pause(0.01) # Uncomment to watch movie as it's being made
+  #plt.pause(0.01) # Uncomment to watch movie as it's being made
   return tuple(info_text) + tuple(player_text) + tuple(player_circ) + (ball_circ,)
 
 #%% Plotting players & ball as 2D movie!
@@ -221,11 +221,14 @@ for i in range(10):
 ball_circ = plt.Circle((0,0), R, color=[1, 0.4, 0])
 
 # Play animation!
-ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=5, repeat=False)
-#ani.save('/home/gmf/%s.mp4' % filename, fps=10, extra_args=['-vcodec', 'libx264'])
-
+ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=4, repeat=False)
 
 #%%
+ani.save('/home/gmf/%s.mp4' % filename, fps=25, extra_args=['-vcodec', 'libx264'])
+#ani.save('/home/gmf/%s.mp4' % filename, fps=25)
+#ani.save('/home/gmf/%s.mp4' % filename, fps=25)
+
+#%% Plot game plays in sequence ...
 
 plt.close('all')
 fig = plt.figure(figsize=(15,7.5))
@@ -291,3 +294,5 @@ for eventnum in range(50,100):
   #ani.save('/home/gmf/%s.mp4' % filename, fps=10, extra_args=['-vcodec', 'libx264'])
   plt.pause(2)
   plt.clf()
+  
+  
