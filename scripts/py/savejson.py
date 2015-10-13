@@ -1,9 +1,19 @@
 #!/usr/bin/python
-# get JSON from NBA.com -> raw text
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Sep 21 23:28:55 2015
+
+savejson.py
+Get JSON from NBA.com -> raw text
+
+@author: gmf
+"""
+
 import requests # query web
 import json # parse json
 import sys # take input arguments from command line
 
+# Where is the data to be read/saved?
 DATAPATH = '/home/gmf'
 DATAPATH2 = '/home/gmf/unsynced/nba/data'
 #DATAPATH = '/home/gmf/Code/git/nba'
@@ -23,7 +33,7 @@ do_sportvu = False
 sv_url = 'http://stats.nba.com/stats/locations_getmoments/'
 sv_params = {'eventid':0, 'gameid':0}
 
-def write_game(gameid):
+def write_game_json(gameid):
   #  
   # Box score
   #
@@ -81,27 +91,16 @@ def write_game(gameid):
       errlist.append(str(eventid))
       print "Error on " + str(eventid)
   
-def write_gamelist(gamelist):
-  # get number of games in given season
-  #get startday, stopday
-  # run nbagames3.py -> make game list
-  # for each game in gamelist...
+def write_gamelist_json(gamelist):
   f = open(gamelist, 'r')
   f.readline() # drop headers    
   for r in f.readlines():
     gameid = r.split(',')[0]
-    write_game(gameid)
+    write_game_json(gameid)
+
+def main():
+  #write_game_json(sys.argv[1]) 
+  write_gamelist_json(sys.argv[1]) 
 
 if __name__ == '__main__': 
-  #write_game(sys.argv[1]) 
-  write_gamelist(sys.argv[1]) 
-  
-  
-  
-#%%
-
-#diso = '20151009'
-#games_url = 'http://data.nba.com/5s/json/cms/noseason/scoreboard/%s/games.json' % diso
-#gamelist = requests.get(games_url).json()['sports_content']['games']['game']
-#html = urllib2.urlopen(games_url).read()
-#gamelist = json.loads(html)['sports_content']['games']['game']
+  main()
