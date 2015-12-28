@@ -4,6 +4,7 @@ Created on Wed Oct  7 01:25:31 2015
 
 @author: gmf
 """
+import os
 import re
 import json
 import pandas as pd
@@ -14,11 +15,10 @@ import matplotlib.animation as animation
 #import pp_tools as pp
 
 team_list = ['ATL', 'BOS', 'BKN', 'CHA', 'CHI', 'CLE', 'DAL', 'DEN', 'DET', 'GSW', 'HOU', 'IND', 'LAC', 'LAL', 'MEM', 'MIA', 'MIL', 'MIN', 'NOP', 'NYK', 'OKC', 'ORL', 'PHI', 'PHO', 'POR', 'SAC', 'SAS', 'TOR', 'UTA', 'WAS']
-USERHOME = '/home/gmf' # Thinkpad
-#USERHOME = '/home/gfiddy' # Office
-NBAHOME = USERHOME + '/Code/git/nba'
-DATAPATH = USERHOME + '/unsynced/nba/data' # Thinkpad
-#DATAPATH = USERHOME + '/External/Code/git/nba'
+HOME = os.environ['HOME']
+NBAHOME = os.environ['NBA']
+DATAPATH = HOME + '/unsynced/nba/data' # Thinkpad
+#DATAPATH = HOME + '/External/Code/git/nba' # Office
 gameid = '0021400001'
 
 def get_boxscore(gameid):
@@ -31,6 +31,10 @@ def get_pbp(gameid):
 
 def get_shots(gameid):
   J = json.load( open( '%s/json/shots_%s.json' % (DATAPATH,gameid), 'r' ) )
+  print J.keys()
+  print J['headers']
+  print J['rowSet']
+  print gameid
   return pd.DataFrame(data=J['rowSet'],columns=J['headers'])
 
 # gameid = '0029900001'
@@ -235,7 +239,8 @@ fig = plt.figure(figsize=(15,7.5))
 ax = plt.gca()
 ax.axis('off')
 
-for eventnum in range(50,100):
+#for eventnum in range(2,10):
+for eventnum in [pbp.iloc[miss_idx[1]].EVENTNUM]:
   # Get SportVu data & downsample
   sv = get_sportvu(gameid, eventnum)
   dn = 2 # downsampling, 1 for all frames

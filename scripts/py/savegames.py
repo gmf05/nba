@@ -9,46 +9,57 @@ Get lists of games from NBA.com -> save as comma-separated-values (csv)
 @author: gmf
 """
 
+import sys
 import requests
 import datetime
 
+DATAPATH = '/home/gmf/unsynced/nba/data'
+#DATAPATH = '/home/gmf/Code/git/nba'
 games_url_base = 'http://data.nba.com/5s/json/cms/noseason/scoreboard/%s/games.json'
 
 def get_gamelist_by_date(date_iso):
   games_url = games_url_base % date_iso
-  G = requests.get(games_url).json()['sports_content']['games']
-  if G is not None and len(G)>0:
-    return G['game']
-  else:
+  G = requests.get(games_url)
+  try:
+    return G.json()['sports_content']['games']['game']
+  except:
     return []
-
+    
 def write_gamelist_by_date(seasonid,startday,stopday):
   numdays = (stopday-startday).days
   datelist = [startday + datetime.timedelta(days=x) for x in range(0, numdays+1)]
-  count=1
-  season_year = str(startday.year - (startday.month<8))
-  
-  f = open('/home/gmf/gamelist.csv','w')
+
+  f = open('%s/csv/gamelist_%s.csv' % (DATAPATH,seasonid), 'w')
+  f.write('gameid,seasonid,gameabbr,home,away\n') # write headers
   for d in datelist:
     diso = str.replace(d.isoformat(),'-','')
-    gamelist = get_gamelist(diso)
+    gamelist = get_gamelist_by_date(diso)
     # do something with gamelist
     ngames = len(gamelist)
     for n in range(ngames):
-      seasonid0 = gamelist[n]['season_id']
-      seasonid1 = '00%s%s%s' % (seasonid0[0], seasonid0[3], seasonid0[4])
-      if seasonid1 == seasonid:
-        gameid,homeabbr,awayabbr = gamelist[n]['id'],gamelist[n]['home']['abbreviation'],gamelist[n]['visitor']['abbreviation']    
-        gameid0 = diso + awayabbr + homeabbr
-        print d,gameid,seasonid,homeabbr,awayabbr
-        f.write(','.join([gameid,seasonid1,gameid0,homeabbr,awayabbr]) + '\n')
+      gameid = gamelist[n]['id']
+      homeabbr,awayabbr = gamelist[n]['home']['abbreviation'],gamelist[n]['visitor']['abbreviation']    
+      gameid0 = diso + awayabbr + homeabbr
+      print d,gameid,homeabbr,awayabbr
+      if seasonid==gameid[0:5]: # make sure to exclude all start break!
+        f.write(','.join([gameid,seasonid,gameid0,homeabbr,awayabbr]) + '\n')
   f.close()
 
+def dateify(date_str):
+  m,d,y = date_str.split('/')
+  return datetime.date(int(y),int(m),int(d))
+
 def main():
-  seasonid = '00214'
-  startday = datetime.date(2014,10,28)
-  stopday = datetime.date(2015,04,15)
-  write_gamelist_by_date(seasonid, startday, stopday)
+  #seasonyr = '2015'
+  seasonyr = sys.argv[1]
+  f = open('%s/csv/season_ranges.csv' % DATAPATH,'r')
+  f.readline() # drop headers
+  for r in f.readlines():
+    fields = r.strip().split(',')
+    if fields[1]==seasonyr: break
+  write_gamelist_by_date(fields[0], dateify(fields[2]), dateify(fields[3]))
+  
+  #write_gamelist_by_date(seasonid, startday, stopday)
 
 if __name__ == '__main__': 
   main()

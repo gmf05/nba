@@ -14,8 +14,8 @@ import json # parse json
 import sys # take input arguments from command line
 
 # Where is the data to be read/saved?
-DATAPATH = '/home/gmf'
-DATAPATH2 = '/home/gmf/unsynced/nba/data'
+#DATAPATH = '/home/gmf' # use for testing
+DATAPATH = '/home/gmf/unsynced/nba/data'
 #DATAPATH = '/home/gmf/Code/git/nba'
 
 # URLs & parameter sets for requests
@@ -29,6 +29,7 @@ sc_params = {'Season':'', 'SeasonType':'Regular Season', 'LeagueID':'00', 'TeamI
 bs_url = 'http://stats.nba.com/stats/boxscore'
 bs_params = {'GameID':0, 'RangeType':0, 'StartPeriod':0, 'EndPeriod':0, 'StartRange':0, 'EndRange':0, 'playbyplay':'undefined'}
 # SportVu Data. WARNING: Time consuming & large. May want to comment out.
+#do_sportvu = True
 do_sportvu = False
 sv_url = 'http://stats.nba.com/stats/locations_getmoments/'
 sv_params = {'eventid':0, 'gameid':0}
@@ -83,14 +84,14 @@ def write_game_json(gameid):
     try:
       sv_params['eventid'] = eventid
       sv = requests.get(sv_url, params=sv_params).json()
-      f = open('%s/json/sv_%s_%s.json' % (DATAPATH, gameid, eventid), 'w')
+      f = open('%s/json/sv_%s_%s.json' % (DATAPATH, gameid, str(eventid).zfill(4), 'w'))
       json.dump(sv, f)
       f.close()
     #except IOError:
     except:
       errlist.append(str(eventid))
       print "Error on " + str(eventid)
-  
+
 def write_gamelist_json(gamelist):
   f = open(gamelist, 'r')
   f.readline() # drop headers    
@@ -100,7 +101,7 @@ def write_gamelist_json(gamelist):
 
 def main():
   #write_game_json(sys.argv[1]) 
-  write_gamelist_json(sys.argv[1]) 
+  write_gamelist_json(sys.argv[1])
 
 if __name__ == '__main__': 
   main()
