@@ -1,12 +1,13 @@
 # Scripts to scrape and analyze basketball data.
 
-Scripts scrape NBA.com, Sports Illustrated, etc. for various data and run machine learning methods on the resulting data.
+Scripts scrape NBA.com, Sports Illustrated, etc. and analyze the resulting data.
 
 Newest data collection scripts pull JSON (using the requests module) via the NBA API. For instance, this simple call gets data for the first game of the 2014-15 regular season:
 
     python savejson.py 0021400001
   
 where 0021400001 is a 10-digit game identifier used by the NBA: XXXYYGGGGG, where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season).
+
 Season prefixes are...
 
     001 : Pre Season
@@ -16,17 +17,17 @@ Season prefixes are...
 
 Hence 0021400001 is the first game of the 2014-15 regular season.
 
-To get an entire season's worth of data, first generate a CSV list of games:
+To create a list of regular season games, call:
 
-    python savegames.py
+    python savegames.py 2015
 
-Then -- after commenting/uncommenting the appropriate lines in savejson main() -- pass that game list to savejson.py:
+Then, after commenting/uncommenting the appropriate lines in savejson main(), pass that game list to savejson.py:
 
-    python savejson.py gamelist.csv
+    python savejson.py gamelist_00214.csv
 
 This will loop over all games in the given list and save data for each one.
 
-Some sample data collected using savejson are available at the url listed in the repo.
+Some sample data collected using savejson are available at the url listed in the repo. A full list of regular season game for season 1996-97 to 2014-15 is also available.
 
 =======
 
