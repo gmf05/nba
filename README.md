@@ -33,21 +33,13 @@ Some sample data collected using savejson are available at the url listed in the
 
 Older data collection scripts parse HTML (using modules re, BeautifulSoup, etc.) into CSV and include:
 
-1. nbagames.py : Given a range of dates & season code (e.g. 00214 = 2014-15 regular season), formulates a text list of all NBA games in the range
+1. nbagames.py : Given a range of dates & season code (e.g. 00214 = 2014-15 regular season), formulates a text list of all NBA games in the range. [REPLACED BY savegames.py]
 
-2. nbascores.py : Given a list of games, queries NBA.com and writes box score data for each one. Also can query vegasinsider.com to get moneyline odds for each game.
+2. nbascores.py : Given a list of games, queries NBA.com and writes box score data for each one. Also can query vegasinsider.com to get moneyline odds for each game. [REPLACED BY savejson.py]
 
-3. nbaplays.py : Given a list of games, queries NBA.com and writes play-by-play data for each one.
+3. nbaplays.py : Given a list of games, queries NBA.com and writes play-by-play data for each one. [REPLACED BY savejson.py]
 
-4. nbastats.py : Given a list of play-by-play data, convert certain events (shots attempted/made, fouls, turnovers) into point process data (i.e. list of binary outcomes over time [0 0 0 0 1 ...])
-
-In the newest code...
-
-1 is replaced by savegames.py
-
-2-3 are replaced by savejson.py
-
-4 is replaced by parse_possession.py
+4. nbastats.py : Given a list of play-by-play data, convert certain events (shots attempted/made, fouls, turnovers) into point process data (i.e. list of binary outcomes over time [0 0 0 0 1 ...]) [REPLACED BY parse_possession.py]
 
 =======
 
