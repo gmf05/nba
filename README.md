@@ -41,6 +41,11 @@ Older data collection scripts parse HTML (using modules re, BeautifulSoup, etc.)
 
 4. nbastats.py : Given a list of play-by-play data, convert certain events (shots attempted/made, fouls, turnovers) into point process data (i.e. list of binary outcomes over time [0 0 0 0 1 ...])
 
+In the newest code...
+1 is replaced by savegames.py
+2-3 are replaced by savejson.py
+4 is replaced by parse_possession.py
+
 =======
 
 Analysis scripts apply machine learning techniques to the resulting data in Python, Matlab, and R. Some simple examples are shown in IPython Notebooks.
