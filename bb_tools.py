@@ -14,14 +14,12 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 # PATHS : Change these for your system
-DATAPATH = '/media/gmf/GMF/unsynced/nba/data' # where to save data
-NBAHOME = '/home/gmf/Code/git/nba' # where are scripts
+DATAHOME = '/media/gmf/GMF/unsynced/nba/data' # where to save data
+REPOHOME = '/home/gmf/Code/git/nba' # where are scripts
         
+current_year = '2015' # 2015-16 season
+default_season = current_year + '-10' 
 user_agent = {'User-agent': 'Mozilla/5.0'}
-current_year = '2015'
-default_season = current_year + '-10'
-stats_base_url = 'http://stats.nba.com/stats/'
-do_sportvu = False
 
 stats_query_names = ['boxscoreadvanced','boxscoreadvancedv2',
 'boxscorefourfactors','boxscorefourfactorsv2','boxscoremisc',
@@ -121,6 +119,17 @@ stats_params = {
   }
 
 ## BEGIN HELPER FUNCTIONS
+def clock2float(clock_time):
+  mm,ss = clock_time.split(':')
+  return int(mm) + float(ss)/60.0
+
+def dateify(date_str):
+  y,m,d = date_str.split('-')
+  return datetime.date(int(y),int(m),int(d))
+
+def dict_inv(d):
+  return zip2(d.values(), d.keys())
+
 def getclosest(i, N):
   N = np.array(N)
   dist = abs(i-N)
@@ -128,30 +137,18 @@ def getclosest(i, N):
   i=np.argmin(dist)
   return N[i],i
 
-def zip2(keys,vals):
-  return dict([(keys[i], vals[i]) for i in range(len(keys))])
-
-def dict_inv(d):
-  return zip2(d.values(), d.keys())
-  
-def dateify(date_str):
-  y,m,d = date_str.split('-')
-  return datetime.date(int(y),int(m),int(d))
-
-
-def compute_sec_elapsed(period, pctime_str):
+def nsec_elapsed(period, pctime_str):
   nmin,nsec = pctime_str.split(':')
   nmin = int(nmin)
   nsec = int(nsec)
-  if period<5:
+  if period<5: # regulation : 720 sec per quarter
     pctime_sec = (11-nmin)*60 + 60 - nsec
-    t = (period-1)*720 + pctime_sec
-  else:
+    return (period-1)*720 + pctime_sec
+  else: # overtime : 300 sec per quarter
     pctime_sec = (4-nmin)*60 + 60 - nsec
-    t = 2880 + (period-5)*300 + pctime_sec
-  return t
+    return 2880 + (period-5)*300 + pctime_sec
   
-def nsec_game(Nperiods):
+def nsec_total(Nperiods):
   if Nperiods<4:
     print 'WARNING: Less than four periods found...'
     return np.nan
@@ -160,16 +157,15 @@ def nsec_game(Nperiods):
   else:
     return (Nperiods-4)*300 + 2880
 
-def nsec_gameid(gameid):
-  return nsec_game(get_pbp(gameid).iloc[-1].PERIOD)
+def nsec_total_gameid(gameid):
+  return nsec_total(get_pbp(gameid).iloc[-1].PERIOD)
   
 def nsec_remain_qtr(p):
   nmin,nsec = str(p.PCTIMESTRING).split(':')
   return int(nmin)*60 + int(nsec)
 
-def clock2float(clock_time):
-  mm,ss = clock_time.split(':')
-  return int(mm) + float(ss)/60.0
+def zip2(keys,vals):
+  return dict([(keys[i], vals[i]) for i in range(len(keys))])
 
 ## END HELPER FUNCTIONS
 
@@ -177,7 +173,7 @@ def clock2float(clock_time):
 # Simple version. Image based
 def draw_court(axis=[0,100,0,50]): 
   #fig = plt.figure(figsize=(15,7.5))
-  img = mpimg.imread(NBAHOME + '/image/nba_court_T.png')
+  img = mpimg.imread(REPOHOME + '/image/nba_court_T.png')
   plt.imshow(img,extent=axis, zorder=0)
   
 ## END PLOTTING FUNCTIONS
@@ -192,7 +188,7 @@ def get_gamelist_by_date(date_iso):
     return []
     
 def get_teams_all():  
-  j = requests.get(stats_base_url + 'franchisehistory', params=stats_params, headers=user_agent).json()['resultSets'][0]
+  j = requests.get('http://stats.nba.com/stats/franchisehistory', params=stats_params, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_teams_current():  
@@ -208,8 +204,7 @@ def get_teams_current():
     else:
       ordered_start_year = np.argsort(T.START_YEAR[matches])
       keep_idx.append(matches[ordered_start_year.values[0]])
-  T = T.iloc[keep_idx]
-  return T
+  return T.iloc[keep_idx].reset_index()
 
 def get_team_roster(teamid,season=default_season):
   p = stats_params.copy()
@@ -234,12 +229,12 @@ def get_team_history(teamid):
 def get_players_all(season=default_season):
   p = stats_params.copy()
   p['Season'] = season
-  j = requests.get(stats_base_url + 'commonallplayers', params=p, headers=user_agent).json()['resultSets'][0]
+  j = requests.get('http://stats.nba.com/stats/commonallplayers', params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_players_current():
   P = get_players_all()
-  return P[P.TO_YEAR==current_year]
+  return P[P.TO_YEAR==current_year].reset_index()
 
 def get_player_info(playerid):
   p = stats_params.copy()
@@ -271,10 +266,9 @@ def get_boxscore(gameid):
   p = stats_params.copy()
   p['GameID'] = gameid
   try:
-    J = json.load(open('%s/json/bs_%s.json' % (DATAPATH, gameid), 'rb'))  
+    J = json.load(open('%s/json/box_%s.json' % (DATAHOME, gameid), 'rb'))  
   except:
     J = requests.get('http://stats.nba.com/stats/boxscore', params=p, headers=user_agent).json()['resultSets']
-  #return J # use for write_game_json
   #---
   box=[]
   for j in J:
@@ -291,11 +285,10 @@ def get_pbp(gameid):
   p = stats_params.copy()
   p['GameID'] = gameid
   try:
-    j = json.load(open('%s/json/pbp_%s.json' % (DATAPATH, gameid), 'rb'))
+    j = json.load(open('%s/json/pbp_%s.json' % (DATAHOME, gameid), 'rb'))
   except:
     #j = requests.get('http://stats.nba.com/stats/playbyplay', params=p, headers=user_agent).json()['resultSets'][0]
     j = requests.get('http://stats.nba.com/stats/playbyplayv2', params=p, headers=user_agent).json()['resultSets'][0]
-  #return j # use for write_game_json
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_shots(gameid):
@@ -303,24 +296,28 @@ def get_shots(gameid):
   p['ContextMeasure'] = 'FGA'
   p['GameID'] = gameid
   try:
-    j = json.load(open('%s/json/sc_%s.json' % (DATAPATH, gameid), 'rb'))
+    j = json.load(open('%s/json/sc_%s.json' % (DATAHOME, gameid), 'rb'))
   except:
     j = requests.get('http://stats.nba.com/stats/shotchartdetail', params=p, headers=user_agent).json()['resultSets'][0]
-  #return j # use for write_game_json
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_average_shots():
   p = stats_params.copy()
   p['GameID']='0021500001' # required but doesn't change output
   p['ContextMeasure'] = 'FG_PCT'
-  j = requests.get('http://stats.nba.com/stats/shotchartdetail', params=p, headers=user_agent).json()['resultSets'][1]
+  try:
+    j = json.load(open('%s/json/shots_average.json' % DATAHOME, 'rb'))
+  except:
+    j = requests.get('http://stats.nba.com/stats/shotchartdetail', params=p, headers=user_agent).json()['resultSets'][0]
+    with open('%s/json/shots_average.json' % DATAHOME, 'w') as f:
+      json.dump(j, f)
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
   
-def get_synergy_data(query_name):
+def get_synergy_stats(query_name):
   j = requests.get('http://stats.nba.com/js/data/playtype' + '/%s.js' % query_name, params={}, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
-def get_sportvu_data(query_name, season='2015'):
+def get_sportvu_stats(query_name, season='2015'):
   j = requests.get('http://stats.nba.com/js/data/sportvu/%s/%sData.json' % (season,query_name),params={},headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])  
 
@@ -337,14 +334,10 @@ def get_combine_results(query_name, season=default_season):
   j = requests.get('http://stats.nba.com/stats/draftcombine%s' % query_name, params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
+
 #### OLD VVV OLD VVV OLD VVV #######
 
-
-
-
-
-
-def get_sportvu(gameid, eventnum):
+def get_sportvu_locations(gameid, eventnum):
   #
   # Important to remember: Event number indexing in play-by-play begins at 1!
   if eventnum==0:
@@ -354,7 +347,7 @@ def get_sportvu(gameid, eventnum):
   p = stats_params.copy()
   p['GameEventID'] = eventnum
   p['GameID'] = gameid
-  J = requests.get(stats_base_url + 'locations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
+  J = requests.get('http://stats.nba.com/stats/locations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
   player_fields = J['home']['players'][0].keys()
   home_players = pd.DataFrame(data=[J['home']['players'][i].values() for i in range(len(J['home']['players']))], columns=player_fields)
   away_players = pd.DataFrame(data=[J['visitor']['players'][i].values() for i in range(len(J['visitor']['players']))], columns=player_fields)
@@ -407,7 +400,7 @@ def get_event_players(gameid, eventnum):
   p = stats_params.copy()
   p['GameEventID'] = eventnum
   p['GameID'] = gameid
-  J = requests.get(stats_base_url + 'locations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
+  J = requests.get('http://stats.nba.com/statslocations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
   player_fields = J['home']['players'][0].keys()
   home_players = pd.DataFrame(data=[J['home']['players'][i].values() for i in range(len(J['home']['players']))], columns=player_fields)
   away_players = pd.DataFrame(data=[J['visitor']['players'][i].values() for i in range(len(J['visitor']['players']))], columns=player_fields)
@@ -432,7 +425,7 @@ def get_event_players(gameid, eventnum):
   
 def get_players_game(gameid):
   eventnum = 1
-  J = json.load( open( '%s/json/sv_%s_%s.json' % (DATAPATH,gameid,str(eventnum).zfill(4)), 'r' ) )
+  J = json.load( open( '%s/json/sportvu_%s_%s.json' % (DATAHOME,gameid,str(eventnum).zfill(4)), 'r' ) )
   player_fields = J['home']['players'][0].keys()
   home_players = pd.DataFrame(data=[J['home']['players'][i].values() for i in range(len(J['home']['players']))], columns=player_fields)
   away_players = pd.DataFrame(data=[J['visitor']['players'][i].values() for i in range(len(J['visitor']['players']))], columns=player_fields)
@@ -513,47 +506,56 @@ def get_play_desc(p):
       print 'PROBLEM!'
       print h + '\t' + v
       #oiuj
-  
+#### END OLD ^^^ END OLD ^^^ END OLD ^^^ #######  
+      
 ## END DATA GRAB FUNCTIONS
 
-## WRITE FUNCTION:
+## WRITE FUNCTIONS:
+ 
 def write_game_json(gameid, do_sportvu=False):
+  p = stats_params.copy()
+  p['ContextMeasure'] = 'FGA'
+  p['GameID'] = gameid
+  
   print 'Game %s, box score' % gameid
-  with open('%s/json/bs_%s.json' % (DATAPATH, gameid), 'w') as f:
-    json.dump( get_boxscore(gameid), f )
+  box = requests.get('http://stats.nba.com/stats/boxscore', params=p, headers=user_agent).json()['resultSets']
+  with open('%s/json/box_%s.json' % (DATAHOME, gameid), 'w') as f:
+    json.dump( box, f)
   
   print 'Game %s, play by play' % gameid
-  with open('%s/json/pbp_%s.json' % (DATAPATH, gameid), 'w') as f:
-    json.dump( get_pbp(gameid), f )
+  pbp = requests.get('http://stats.nba.com/stats/playbyplayv2', params=p, headers=user_agent).json()['resultSets'][0]
+  with open('%s/json/pbp_%s.json' % (DATAHOME, gameid), 'w') as f:
+    json.dump( pbp, f)
     
   print 'Game %s, shot chart' % gameid
-  with open('%s/json/shots_%s.json' % (DATAPATH, gameid), 'w') as f:
-    json.dump( get_shots(gameid), f )
+  shots = requests.get('http://stats.nba.com/stats/shotchartdetail', params=p, headers=user_agent).json()['resultSets'][0]
+  with open('%s/json/shots_%s.json' % (DATAHOME, gameid), 'w') as f:
+    json.dump( shots, f)
 
-def write_gamelist_json(gamelist):
-  f = open(gamelist, 'r')
+def write_gamelist_json(filename):
+  f = open(filename, 'r')
   f.readline() # drop headers    
   for r in f.readlines():
     gameid = r.split(',')[0]
     write_game_json(gameid)
 
-def write_gamelist_by_date(seasonid,startday,stopday):
+def write_gamelist_by_date(filename,seasonid,startday,stopday):
   numdays = (stopday-startday).days
   datelist = [startday + datetime.timedelta(days=x) for x in range(0, numdays+1)]
 
-  f = open('%s/csv/gamelist_update.csv' % DATAPATH, 'w')
-  f.write('gameid,seasonid,gameabbr,away,home\n') # write headers
+  f = open(filename, 'w')
+  f.write('GAME_ID,SEASON_ID,GAME_CODE,AWAY,HOME\n') # write headers
   for d in datelist:
     diso = str.replace(d.isoformat(),'-','')
     games = get_gamelist_by_date(diso)
     for g in games:
       home = g['home']['team_key']
       away = g['visitor']['team_key']
-      gameid0 = diso + away + home
+      gamecode = diso + away + home
       print d,g['id'],away,home
       #
-      # VV STILL NEED TO FIX
+      # VV NEED TO FIX: STILL INCLUDES ALL STAR GAME
       #
       if seasonid==g['id'][0:5]: # make sure to exclude all start break!
-        f.write(','.join([g['id'],seasonid,gameid0,away,home]) + '\n')
+        f.write(','.join([g['id'],seasonid,gamecode,away,home]) + '\n')
   f.close()
