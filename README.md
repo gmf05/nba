@@ -5,12 +5,15 @@ Scripts scrape NBA.com, Sports Illustrated, etc. and analyze the resulting data.
 Newest data collection scripts pull JSON (using the requests module) via the NBA API. For instance, this block of Python code saves data for the first game of the 2014-15 regular season:
 
     import bb_tools as bb
-    bb.write_game_json('0021400001')
-    box = bb.get_boxscore('0021400001')
-    pbp = bb.get_pbp('0021400001')
-    shots = bb.get_shots('0021400001')
+    gameid = '0021400001'
+    bb.write_game_json(gameid) # save to disk (not necessary, but faster)
+    box = bb.get_boxscore(gameid) # read from disk -- or web if not saved 
+    pbp = bb.get_pbp(gameid)
+    shots = bb.get_shots(gameid)
   
-where 0021400001 is a 10-digit game identifier used by the NBA: XXXYYGGGGG, where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season).
+Data read/write paths are set in bb_tools.py.
+
+The NBA's Game ID, 0021400001, is a 10-digit code: XXXYYGGGGG, where XXX refers to a season prefix, YY is the season year (e.g. 14 for 2014-15), and GGGGG refers to the game number (1-1230 for a full 30-team regular season).
 
 Season prefixes are...
 
@@ -19,13 +22,14 @@ Season prefixes are...
     003 : All-Star
     004 : Post Season
 
-The code first saves the JSON data to disk and then loads the resulting data. Data read/write paths are set in bb_tools.py.
-
 To save all data for the current season, run the following from the command line:
 
     python nbaupdate.py
 
-Some sample data collected using savejson are available at the url listed in the repo. A full list of regular season game for season 1996-97 to 2014-15 is also available.
+To save data from previous seasons, you can pass an entire list of games. For example, the list of regular season games from 1996-97 to 2014-15 is provided in the repo.
+
+    gamelist = bb.REPOHOME + '/data/csv/games_96-14.csv'
+    bb.write_gamelist_json(gamelist)
 
 =======
 
