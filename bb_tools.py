@@ -15,6 +15,7 @@ import matplotlib.image as mpimg
 
 # PATHS : Change these for your system
 DATAHOME = '/media/gmf/GMF/unsynced/nba/data' # where to save data
+#DATAHOME = '/media/ext/GMF/Data/nba' # where to save data
 REPOHOME = '/home/gmf/Code/git/nba' # where are scripts
         
 current_year = '2015' # 2015-16 season
@@ -117,14 +118,18 @@ stats_params = {
   'VsDivision':'' # format: (Atlantic)|(Central)|(Northwest)|(Pacific)|(Southeast)|(Southwest)|(East)|(West) 
   #'zone-mode':'basic',
   }
+  
+# Sports Illustrated play-by-play:
+si_params = {'json':1, 'sport': 'basketball/nba',
+   'id':0, 'box':'false', 'pbp':'true', 'linescore':'false'}
 
 ## BEGIN HELPER FUNCTIONS
 def clock2float(clock_time):
   mm,ss = clock_time.split(':')
   return int(mm) + float(ss)/60.0
 
-def dateify(date_str):
-  y,m,d = date_str.split('-')
+def dateify(date_str, delim='-'):
+  y,m,d = date_str.split(delim)
   return datetime.date(int(y),int(m),int(d))
 
 def dict_inv(d):
@@ -226,11 +231,16 @@ def get_team_history(teamid):
   j = requests.get('http://stats.nba.com/stats/teamyearbyyearstats', params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
-def get_players_all(season=default_season):
+def get_players_all():
   p = stats_params.copy()
-  p['Season'] = season
+  p['Season'] = default_season
   j = requests.get('http://stats.nba.com/stats/commonallplayers', params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
+
+def get_players_season(season=default_season):
+  season_year = int(season.split('-')[0])
+  P = get_players_all()
+  return P.iloc[np.where([(int(p.FROM_YEAR)<=season_year)*(int(p.TO_YEAR)>=season_year) for n,p in P.iterrows()])[0]].reset_index()
 
 def get_players_current():
   P = get_players_all()
@@ -263,11 +273,11 @@ def get_team_gamelog(teamid,season=default_season):
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])  
 
 def get_boxscore(gameid):
-  p = stats_params.copy()
-  p['GameID'] = gameid
   try:
     J = json.load(open('%s/json/box_%s.json' % (DATAHOME, gameid), 'rb'))  
   except:
+    p = stats_params.copy()
+    p['GameID'] = gameid
     J = requests.get('http://stats.nba.com/stats/boxscore', params=p, headers=user_agent).json()['resultSets']
   #---
   box=[]
@@ -282,32 +292,32 @@ def get_boxscore(gameid):
   #return [pd.DataFrame(data=j['rowSet'],columns=j['headers']) for j in J[0:6]]
 
 def get_pbp(gameid):
-  p = stats_params.copy()
-  p['GameID'] = gameid
   try:
     j = json.load(open('%s/json/pbp_%s.json' % (DATAHOME, gameid), 'rb'))
   except:
+    p = stats_params.copy()
+    p['GameID'] = gameid
     #j = requests.get('http://stats.nba.com/stats/playbyplay', params=p, headers=user_agent).json()['resultSets'][0]
     j = requests.get('http://stats.nba.com/stats/playbyplayv2', params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_shots(gameid):
-  p = stats_params.copy()
-  p['ContextMeasure'] = 'FGA'
-  p['GameID'] = gameid
   try:
     j = json.load(open('%s/json/sc_%s.json' % (DATAHOME, gameid), 'rb'))
   except:
+    p = stats_params.copy()
+    p['ContextMeasure'] = 'FGA'
+    p['GameID'] = gameid
     j = requests.get('http://stats.nba.com/stats/shotchartdetail', params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_average_shots():
-  p = stats_params.copy()
-  p['GameID']='0021500001' # required but doesn't change output
-  p['ContextMeasure'] = 'FG_PCT'
   try:
     j = json.load(open('%s/json/shots_average.json' % DATAHOME, 'rb'))
   except:
+    p = stats_params.copy()
+    p['GameID']='0021500001' # required but doesn't change output
+    p['ContextMeasure'] = 'FG_PCT'
     j = requests.get('http://stats.nba.com/stats/shotchartdetail', params=p, headers=user_agent).json()['resultSets'][0]
     with open('%s/json/shots_average.json' % DATAHOME, 'w') as f:
       json.dump(j, f)
@@ -335,105 +345,184 @@ def get_combine_results(query_name, season=default_season):
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 
-#### OLD VVV OLD VVV OLD VVV #######
+## Sports Illustrated play-by-play:
+def get_si_pbp(gameid):
+  try:
+    k = json.load(open('%s/json/si_pbp_%s.json' % (DATAHOME, gameid), 'rb'))
+  except:
+    p = si_params.copy()
+    p['id'] = gameid
+    j = requests.get('http://www.si.com/pbp/liveupdate', params=p, headers=user_agent).json()
+    k = j['apiResults'][0]['league']['season']['eventType'][0]['events'][0]['pbp']
+  return pd.DataFrame.from_records(k)
+
+def write_si_pbp(gameid):
+  # convert gameid to SI id
+  print 'Game %s, Sports Illustrated' % gameid
+  p = si_params.copy()
+  p['id'] = gameid
+  j = requests.get('http://www.si.com/pbp/liveupdate', params=p, headers=user_agent).json()
+  with open('%s/json/si_pbp_%s.json' % (DATAHOME, gameid), 'w') as f:
+    json.dump( j['apiResults'][0]['league']['season']['eventType'][0]['events'][0]['pbp'], f)
+
+#### NOTE: This is for now-removed SportVu endpoint
+# Still works for any previously-saved data 
+# Will need tweaking if/when the endpoint is returned
+#
 
 def get_sportvu_locations(gameid, eventnum):
-  #
+  # 
   # Important to remember: Event number indexing in play-by-play begins at 1!
   if eventnum==0:
     print 'Warning: Event Num = 0 passed. Switching to event number 1.'
     eventnum+=1
-  #
-  p = stats_params.copy()
-  p['GameEventID'] = eventnum
-  p['GameID'] = gameid
-  J = requests.get('http://stats.nba.com/stats/locations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
-  player_fields = J['home']['players'][0].keys()
-  home_players = pd.DataFrame(data=[J['home']['players'][i].values() for i in range(len(J['home']['players']))], columns=player_fields)
-  away_players = pd.DataFrame(data=[J['visitor']['players'][i].values() for i in range(len(J['visitor']['players']))], columns=player_fields)
-  players = pd.merge(home_players, away_players, how='outer')
-  jerseydict = dict(zip(players.playerid.values, players.jersey.values))
-  playerteamdict = dict(zip(players.playerid.values, [J['home']['teamid'] for n in range(len(home_players))] + [J['visitor']['teamid'] for n in range(len(away_players))]))
-  moments = J['moments']
-  #  
-  # SHOULD WE DOWNSAMPLE THE NUMBER OF MOMENTS CHOSEN????
   # 
-  # Initialize arrays
-  num_moments = len(moments)
-  num_players = 10
-  fields = ['playerx','playery','playerid','playernum', 'playername', 'playerpos', 'teamid','ballx','bally',
-          'ballz','shotclock_remain','sec_remain','momentid','period']
-  num_fields = len(fields)
-  D = pd.DataFrame(data=[[None for i in range(num_fields)] for j in range(num_moments)], columns=fields)
-  player_fields = ['playerid','playernum','playername', 'playerpos','playerx','playery','teamid']
-  for f in player_fields: D[f] = [np.zeros(num_players,dtype=int) for n in range(num_moments)]
+  try:
+    #J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum), 'rb') )
+    #J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum.zfill(4)), 'rb') )
+    J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum), 'rb') )
+  except:
+    p = stats_params.copy()
+    p['GameEventID'] = eventnum
+    p['GameID'] = gameid
+    J = requests.get('http://stats.nba.com/stats/locations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
 
-  # VERY IMPORTANT!: Here we sort order of the position data to make sure home=1-5, away=6-10
-  home_idx=[]
-  away_idx=[]
-  for k in range(1,11):
-    if moments[0][-1][k][0]==J['home']['teamid']: home_idx.append(k)
-    elif moments[0][-1][k][0]==J['visitor']['teamid']: away_idx.append(k)
-  player_idx = np.concatenate((home_idx,away_idx))
+  home_players = pd.DataFrame.from_records(J['home']['players'])
+  home_players['teamid'] = J['home']['teamid']
+  away_players = pd.DataFrame.from_records(J['visitor']['players'])
+  away_players['teamid'] = J['visitor']['teamid']
+  players = pd.merge(home_players, away_players, how='outer')
+  players['playername'] = [pl.firstname + ' ' + pl.lastname for n,pl in players.iterrows()]
+  namedict = dict(zip(players.playerid.values, players.playername.values))  
+  numberdict = dict(zip(players.playerid.values, players.jersey.values))
+  positiondict = dict(zip(players.playerid.values, players.position.values))
+
+  # SHOULD WE DOWNSAMPLE THE NUMBER OF MOMENTS CHOSEN????
+  moments = J['moments']
+  nmoments = len(moments)
   
-  # Loop over each entry in the SportVu data (each moment, ~0.04 sec)
-  for i in range(num_moments):
-    D.period.iloc[i], D.momentid.iloc[i], D.sec_remain.iloc[i], D.shotclock_remain.iloc[i] = moments[i][0:4]
-    D.ballx.iloc[i],D.bally.iloc[i],D.ballz.iloc[i] = moments[i][-1][0][2:5]
-#    # Initializing lists for player info
-    # Filling out player info
-    for j in range(num_players):
-      #print i,j,player_idx[j],D.playerid.shape
-      D.playerid[i][j] = moments[i][-1][player_idx[j]][1]
-      D.playerx[i][j], D.playery[i][j] = moments[i][-1][player_idx[j]][2:4]
-      D.playernum[i][j] = jerseydict[D.playerid[i][j]]
-      D.teamid[i][j] = playerteamdict[D.playerid[i][j]]
+  # Save simple (1-d) data
+  nplayers = 10  
+  period = [m[0] for m in moments]
+  momentid = [m[1] for m in moments]
+  period_remain = [m[2] for m in moments]
+  shotclock_remain = [m[3] for m in moments]
+  ballx = [m[5][0][2] for m in moments]
+  bally = [m[5][0][3] for m in moments]
+  ballz = [m[5][0][4] for m in moments]
+  
+  # Save larger (10-d) data for each player
+  teamid = np.array(range(nmoments), dtype=object)
+  playerid = np.array(range(nmoments), dtype=object)
+  playername = np.array(range(nmoments), dtype=object)
+  playernumber = np.array(range(nmoments), dtype=object)
+  position = np.array(range(nmoments), dtype=object)
+  playerx = np.array(range(nmoments), dtype=object)
+  playery = np.array(range(nmoments), dtype=object)
 
-  # Also, we reflect the court to match TV: Home team attacks right to start  
-  #D.playerx = 100 - D.playerx
-  #D.ballx = 100 - D.ballx
+  for m in range(nmoments):
+    teamid[m] = [moments[m][5][n+1][0] for n in range(nplayers)]
+    playerid[m] = [moments[m][5][n+1][1] for n in range(nplayers)]
+    playerx[m] = [moments[m][5][n+1][2] for n in range(nplayers)]
+    playery[m] = [moments[m][5][n+1][3] for n in range(nplayers)]
+    playername[m] = [namedict[pl] for pl in playerid[m]]
+    playernumber[m] = [numberdict[pl] for pl in playerid[m]]
+    position[m] = [positiondict[pl] for pl in playerid[m]]
+
+  # Return result as Pandas DataFrame
+  D = pd.DataFrame(data=momentid, columns=['momentid'])
+  D['period'] = period
+  D['period_remain'] = period_remain
+  D['shotclock_remain'] = shotclock_remain
+  D['ballx'] = ballx
+  D['bally'] = bally
+  D['ballz'] = ballz
+  D['playerid'] = playerid
+  D['playername'] = playername
+  D['playernumber'] = playernumber
+  D['position'] = position
+  D['teamid'] = teamid  
+  D['playerx'] = playerx
+  D['playery'] = playery
   return D
 
-
-def get_event_players(gameid, eventnum):
+def get_players_event(gameid, eventnum):
   # Important to remember: Event number indexing in play-by-play begins at 1!
-  p = stats_params.copy()
-  p['GameEventID'] = eventnum
-  p['GameID'] = gameid
-  J = requests.get('http://stats.nba.com/statslocations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
-  player_fields = J['home']['players'][0].keys()
-  home_players = pd.DataFrame(data=[J['home']['players'][i].values() for i in range(len(J['home']['players']))], columns=player_fields)
-  away_players = pd.DataFrame(data=[J['visitor']['players'][i].values() for i in range(len(J['visitor']['players']))], columns=player_fields)
+  if eventnum==0:
+    print 'Warning: Event Num = 0 passed. Switching to event number 1.'
+    eventnum+=1
+  # 
+  try:
+    #J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum), 'rb') )
+    J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum.zfill(4)), 'rb') )
+  except:
+    p = stats_params.copy()
+    p['GameEventID'] = eventnum
+    p['GameID'] = gameid
+    J = requests.get('http://stats.nba.com/stats/locations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
+
+  home_players = pd.DataFrame.from_records(J['home']['players'])
+  home_players['teamid'] = J['home']['teamid']
+  away_players = pd.DataFrame.from_records(J['visitor']['players'])
+  away_players['teamid'] = J['visitor']['teamid']
   players = pd.merge(home_players, away_players, how='outer')
-  playerteamdict = dict(zip(players.playerid.values, [J['home']['teamid'] for n in range(len(home_players))] + [J['visitor']['teamid'] for n in range(len(away_players))]))
-  players['team'] = [playerteamdict[players.iloc[n]['playerid']] for n in range(len(players))]
+  players['playername'] = [pl.firstname + ' ' + pl.lastname for n,pl in players.iterrows()]  
+  namedict = dict(zip(players.playerid.values, players.playername.values))
+  numberdict = dict(zip(players.playerid.values, players.jersey.values))
+  positiondict = dict(zip(players.playerid.values, players.position.values))
+  
   moments = [J['moments'][0], J['moments'][-1]]
-  num_players = 10
-  fields = ['playerid','teamid','shotclock_remain','sec_remain','momentid','period']
-  num_fields = len(fields)
-  D = pd.DataFrame(data=[[None for i in range(num_fields)] for j in range(2)], columns=fields)
-  player_fields = ['playerid','teamid']
-  for f in player_fields: D[f] = [np.zeros(num_players,dtype=int) for n in range(2)]
-  D.period.iloc[0], D.momentid.iloc[0], D.sec_remain.iloc[0], D.shotclock_remain.iloc[0] = moments[0][0:4]
-  D.period.iloc[1], D.momentid.iloc[1], D.sec_remain.iloc[1], D.shotclock_remain.iloc[1] = moments[-1][0:4]      
-  for j in range(num_players):    
-    D.playerid[0][j] = moments[0][-1][j+1][1] # +1 bc ball is row 0!
-    D.teamid[0][j] = playerteamdict[D.playerid[0][j]]
-    D.playerid[1][j] = moments[-1][-1][j+1][1] # +1 bc ball is row 0!
-    D.teamid[1][j] = playerteamdict[D.playerid[1][j]]
+  nmoments = len(moments)
+  
+  # Initialize arrays
+  nplayers = 10  
+  momentid = [m[1] for m in moments]
+  teamid = np.array(range(nmoments), dtype=object)
+  playerid = np.array(range(nmoments), dtype=object)
+  playername = np.array(range(nmoments), dtype=object)
+  playernumber = np.array(range(nmoments), dtype=object)
+  position = np.array(range(nmoments), dtype=object)
+  playerx = np.array(range(nmoments), dtype=object)
+  playery = np.array(range(nmoments), dtype=object)
+
+  for m in range(nmoments):
+    teamid[m] = [moments[m][5][n+1][0] for n in range(nplayers)]
+    playerid[m] = [moments[m][5][n+1][1] for n in range(nplayers)]
+    playerx[m] = [moments[m][5][n+1][2] for n in range(nplayers)]
+    playery[m] = [moments[m][5][n+1][3] for n in range(nplayers)]
+    playername[m] = [namedict[pl] for pl in playerid[m]]
+    playernumber[m] = [numberdict[pl] for pl in playerid[m]]
+    position[m] = [positiondict[pl] for pl in playerid[m]]
+
+  D = pd.DataFrame(data=momentid, columns=['momentid'])
+  D['playerid'] = playerid
+  D['playername'] = playername
+  D['playernumber'] = playernumber
+  D['position'] = position
+  D['teamid'] = teamid
   return D
   
-def get_players_game(gameid):
-  eventnum = 1
-  J = json.load( open( '%s/json/sportvu_%s_%s.json' % (DATAHOME,gameid,str(eventnum).zfill(4)), 'r' ) )
-  player_fields = J['home']['players'][0].keys()
-  home_players = pd.DataFrame(data=[J['home']['players'][i].values() for i in range(len(J['home']['players']))], columns=player_fields)
-  away_players = pd.DataFrame(data=[J['visitor']['players'][i].values() for i in range(len(J['visitor']['players']))], columns=player_fields)
-  players = pd.merge(home_players, away_players, how='outer')
-  playerteamdict = dict(zip(players.playerid.values, [J['home']['teamid'] for n in range(len(home_players))] + [J['visitor']['teamid'] for n in range(len(away_players))]))
-  players['team'] = [playerteamdict[players.iloc[n]['playerid']] for n in range(len(players))]
-  return players
+def get_players_game(gameid):  
+  eventnum = '1'
+  # add while loop to ensure we keep going eventnum += 1
+  # until we get a working number, if eventnum=1 doesn't work
+  try:
+    #J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum), 'rb') )
+    J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum.zfill(4)), 'rb') )
+  except:
+    p = stats_params.copy()
+    p['GameEventID'] = eventnum
+    p['GameID'] = gameid
+    J = requests.get('http://stats.nba.com/stats/locations_getmoments', params=p, headers=user_agent).json()['resultSets'][0]
 
+  home_players = pd.DataFrame.from_records(J['home']['players'])
+  home_players['teamid'] = J['home']['teamid']
+  away_players = pd.DataFrame.from_records(J['visitor']['players'])
+  away_players['teamid'] = J['visitor']['teamid']
+  players = pd.merge(home_players, away_players, how='outer')
+  return players
+  #return get_boxscore(gameid)[4]
+  
 def get_play_team(p):
   # given a row of play-by-play data p, this function determines which 
   # team made the given play  
