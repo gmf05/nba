@@ -303,7 +303,7 @@ def get_pbp(gameid):
 
 def get_shots(gameid):
   try:
-    j = json.load(open('%s/json/sc_%s.json' % (DATAHOME, gameid), 'rb'))
+    j = json.load(open('%s/json/shots_%s.json' % (DATAHOME, gameid), 'rb'))
   except:
     p = stats_params.copy()
     p['ContextMeasure'] = 'FGA'
@@ -540,8 +540,8 @@ def get_play_team(p):
     v = p.VISITORDESCRIPTION
     e_type = p.EVENTMSGTYPE
     if e_type==1:
-      if re.search('Shot',h): return 'home'
-      elif re.search('Shot',v): return 'away'
+      if re.search('Shot',h) or re.search('Layup',h) or re.search('Dunk',h): return 'home'
+      elif re.search('Shot',v) or re.search('Layup',v) or re.search('Dunk',v): return 'away'
     elif e_type==2:
       if re.search('MISS',h): return 'home'
       elif re.search('MISS',v): return 'away'
