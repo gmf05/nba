@@ -8,6 +8,7 @@ import requests
 import json
 import re
 import datetime
+import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -197,19 +198,20 @@ def get_teams_all():
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_teams_current():  
-  T = get_teams_all()
-  T = T[T.END_YEAR==current_year]
+#  T = get_teams_all()
+#  T = T[T.END_YEAR==current_year]
   # for each (unique) team, keep its "oldest version"
   # i.e. one with earliest start year
-  keep_idx = []
-  for t in np.unique(T.TEAM_ID):
-    matches = np.where(T.TEAM_ID==t)[0]
-    if len(matches)==1:
-      keep_idx.append(matches[0])
-    else:
-      ordered_start_year = np.argsort(T.START_YEAR[matches])
-      keep_idx.append(matches[ordered_start_year.values[0]])
-  return T.iloc[keep_idx].reset_index()
+#  keep_idx = []
+#  for t in np.unique(T.TEAM_ID):
+#    matches = np.where(T.TEAM_ID==t)[0]
+#    if len(matches)==1:
+#      keep_idx.append(matches[0])
+#    else:
+#      ordered_start_year = np.argsort(T.START_YEAR[matches])
+#      keep_idx.append(matches[ordered_start_year.values[0]])
+#  return T.iloc[keep_idx].reset_index()
+  return pickle.load(open(REPOHOME + '/data/teams.p', 'rb'))
 
 def get_team_roster(teamid,season=default_season):
   p = stats_params.copy()
@@ -274,7 +276,7 @@ def get_team_gamelog(teamid,season=default_season):
 
 def get_boxscore(gameid):
   try:
-    J = json.load(open('%s/json/box_%s.json' % (DATAHOME, gameid), 'rb'))  
+    J = json.load(open('%s/json/box_%s.json' % (DATAHOME, gameid), 'rb'))
   except:
     p = stats_params.copy()
     p['GameID'] = gameid
@@ -290,6 +292,16 @@ def get_boxscore(gameid):
   #---
   #return [pd.DataFrame(data=j['rowSet'],columns=j['headers']) for j in J]
   #return [pd.DataFrame(data=j['rowSet'],columns=j['headers']) for j in J[0:6]]
+
+def get_boxscore_v2(gameid, box_type='summary'):
+  try:
+    J = json.load(open('%s/json/boxv2_%s_%s.json' % (DATAHOME, box_type, gameid), 'rb'))
+  except:
+    p = stats_params.copy()
+    p['GameID'] = gameid
+    #box_types = ['summary','traditional','scoring', 'fourfactors','advanced','playertrack','usage','misc']
+    J = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
+  return pd.DataFrame(data=J['rowSet'], columns=J['headers'])
 
 def get_pbp(gameid):
   try:
@@ -374,8 +386,9 @@ def get_sportvu_locations(gameid, eventnum):
   # 
   # Important to remember: Event number indexing in play-by-play begins at 1!
   if eventnum==0:
-    print 'Warning: Event Num = 0 passed. Switching to event number 1.'
-    eventnum+=1
+    #print 'Warning: Event Num = 0 passed. Switching to event number 1.'
+    #eventnum+=1
+    return
   # 
   try:
     #J = json.load( open('%s/json/sv_%s_%s.json' % (DATAHOME, gameid, eventnum), 'rb') )
@@ -560,7 +573,6 @@ def get_play_team(p):
     else:
       print 'PROBLEM!'
       print h + '\t' + v
-      #oiuj
 
 def get_play_desc(p):
   if p.HOMEDESCRIPTION is not None and p.VISITORDESCRIPTION is None:
@@ -596,7 +608,7 @@ def get_play_desc(p):
       print h + '\t' + v
       #oiuj
 #### END OLD ^^^ END OLD ^^^ END OLD ^^^ #######  
-      
+
 ## END DATA GRAB FUNCTIONS
 
 ## WRITE FUNCTIONS:
@@ -606,11 +618,31 @@ def write_game_json(gameid, do_sportvu=False):
   p['ContextMeasure'] = 'FGA'
   p['GameID'] = gameid
   
-  print 'Game %s, box score' % gameid
-  box = requests.get('http://stats.nba.com/stats/boxscore', params=p, headers=user_agent).json()['resultSets']
-  with open('%s/json/box_%s.json' % (DATAHOME, gameid), 'w') as f:
-    json.dump( box, f)
+  # Box score endpoints just changed:::
+  #box_types = ['summary','traditional','scoring', 'fourfactors','advanced','playertrack','usage','misc']
+  #box_types = ['summary','traditional','scoring', 'fourfactors','advanced']
   
+  #for box_type in box_types:
+  box_type = 'summary'
+  print 'Game %s, box score (%s)' % (box_type, gameid)
+  with open('%s/json/boxv2_%s_%s.json' % (DATAHOME, box_type, gameid), 'w') as f:
+    box = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
+    json.dump( box, f)
+    
+  box_type = 'traditional'
+  #box_type = 'advanced'
+  #box_type = 'playertrack'
+  print 'Game %s, box score (%s)' % (box_type, gameid)
+  with open('%s/json/boxv2_%s_%s.json' % (DATAHOME, box_type, gameid), 'w') as f:
+    box = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
+    json.dump( box, f)
+    
+  box_type = 'playertrack'
+  print 'Game %s, box score (%s)' % (box_type, gameid)
+  with open('%s/json/boxv2_%s_%s.json' % (DATAHOME, box_type, gameid), 'w') as f:
+    box = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
+    json.dump( box, f)
+      
   print 'Game %s, play by play' % gameid
   pbp = requests.get('http://stats.nba.com/stats/playbyplayv2', params=p, headers=user_agent).json()['resultSets'][0]
   with open('%s/json/pbp_%s.json' % (DATAHOME, gameid), 'w') as f:

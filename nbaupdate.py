@@ -7,7 +7,7 @@ import json
 import bb_tools as bb
 
 def main():
-  season_id = '00215'
+  season_id = '00216'
 
   print 'Finding date of last update...'
   try:
@@ -18,7 +18,7 @@ def main():
     last_update = bb.dateify(last_boxscore_date.split('T')[0])
     start_day = last_update + datetime.timedelta(days=1)
   except: # if no data exists, use first day of season
-    start_day = datetime.date(2015,10,27)
+    start_day = datetime.date(2016,10,25)
   end_day = datetime.date.today() - datetime.timedelta(days=1)
   
   print 'Getting list of games since last update...'

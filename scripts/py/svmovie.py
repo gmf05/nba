@@ -111,4 +111,4 @@ ball_circ = plt.Circle((0,0), R, color=[1, 0.4, 0])
 # #%% Play animation!
 
 ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=5, repeat=False)
-#ani.save(filename + '.mp4', fps=10, extra_args=['-vcodec', 'libx264'])
+ani.save(filename + '.mp4', fps=10, extra_args=['-vcodec', 'libx264'])
