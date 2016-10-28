@@ -19,8 +19,8 @@ DATAHOME = '/media/gmf/GMF/unsynced/nba/data' # where to save data
 #DATAHOME = '/media/ext/GMF/Data/nba' # where to save data
 REPOHOME = '/home/gmf/Code/git/nba' # where are scripts
         
-current_year = '2015' # 2015-16 season
-default_season = current_year + '-10' 
+current_year = '2016' # 2016-17 season
+default_season = current_year + '-10'
 user_agent = {'User-agent': 'Mozilla/5.0'}
 
 stats_query_names = ['boxscoreadvanced','boxscoreadvancedv2',

@@ -27,5 +27,16 @@ def main():
   print 'Getting stats for each game...'
   bb.write_gamelist_json('%s/csv/gamelist_update.csv' % bb.DATAHOME)
 
+  print 'Updating last day of update in memory'
+  with open(bb.DATAHOME + '/csv/last_update.txt') as f:
+    f.write('/'.join([str(d.month), str(d.day), str(d.year)]))
+
 if __name__ == '__main__': 
   main()
+  
+#import datetime
+#import bb_tools as bb
+#season_id = '00216'
+#start_day = datetime.date(2016,10,25)
+#end_day = datetime.date.today() - datetime.timedelta(days=1)
+#bb.write_gamelist_by_date('%s/csv/games2016.csv' % bb.DATAHOME, season_id, start_day, end_day)
