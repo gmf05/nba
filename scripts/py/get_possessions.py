@@ -27,7 +27,7 @@ events_db = db['possessions']
 #events_db.create_index([('SEASONID', pymongo.ASCENDING), ('GAMEID', pymongo.ASCENDING)])
 
 # where do periods start and end??
-def get_period_start_end(pbp_g):  
+def get_period_start_end(pbp_g):
   period_start = np.where(pbp_g['EVENTMSGTYPE']==12)[0][0:] + 1
   period_end = np.where(pbp_g['EVENTMSGTYPE']==13)[0][0:]
   period_start = np.sort(period_start)
@@ -84,54 +84,49 @@ def get_period_start_end(pbp_g):
   return period_start, period_end
 
 
-def get_period_starters(gameid):
+def get_period_starters(pbp_g):
 #%
   # Get box score information so we can see which
   # teams are home/away
-  try:
-    info_g = bb.get_boxscore_v2(gameid, box_type='summary')
-  except:
-    info_g = bb.get_boxscore(gameid)[2]      
-  home = info_g['HOME_TEAM_ID'].values[0]
+  gameid = pbp_g.iloc[0]['GAME_ID']
+  info_g = bb.get_info(gameid)
+  home,away = info_g[['HOME_TEAM_ID','VISITOR_TEAM_ID']]
+  away_team, home_team = bb.get_teams_gameid(gameid)
 
-  # Get play-by-play so we can parse it
-  pbp_g = bb.get_pbp(gameid) # play-by-play
-    
-  # Drop technical foul related activity since player who
-  # commits one may not be on court
-  pbp_g = pbp_g[pbp_g['EVENTMSGACTIONTYPE']!=16]
-  desc = []
-  for i,p in pbp_g.iterrows():
-    h,v = p[['HOMEDESCRIPTION','VISITORDESCRIPTION']]
-    if not h:
-      desc.append(v)
-    elif not v:
-      desc.append(h)
-    else:
-      desc.append(h + ' ' + v)
-  pbp_g['DESCRIPTION'] = desc
-  idx = np.where([not bool(re.search('T.FOUL', str(p))) for p in pbp_g['DESCRIPTION'].values])[0]
+  pbp_g = pbp_g[pbp_g['EVENTMSGACTIONTYPE']!=16] # drop un-useful event type, apparently related to technicals
+  pbp_g = pbp_g[pbp_g['EVENTMSGTYPE']!=11] # drop ejections/violations, lots of extraneous ones
+  # Drop technical fouls -- Often, they come from people NOT on the court
+  idx = np.where([not bool(re.search('T.FOUL', str(p))) for p in pbp_g['HOMEDESCRIPTION'].values])[0]
+  pbp_g = pbp_g.iloc[idx]
+  idx = np.where([not bool(re.search('T.FOUL', str(p))) for p in pbp_g['VISITORDESCRIPTION'].values])[0]
+  pbp_g = pbp_g.iloc[idx]
+  # Drop timeouts -- These often have a player ID attached, which is weird
+  idx = np.where([not bool(re.search('Timeout', str(p))) for p in pbp_g['HOMEDESCRIPTION'].values])[0]
+  pbp_g = pbp_g.iloc[idx]
+  idx = np.where([not bool(re.search('Timeout', str(p))) for p in pbp_g['VISITORDESCRIPTION'].values])[0]
   pbp_g = pbp_g.iloc[idx]
   
   # NOTE: there are sometimes extraneous EVENTMSGTYPE for quarter start (12)
-  # or quarter end (13). They happen a couple times per season, but ruin all 
-  # quarters after they happen. We check by making sure start/end indices
-  # have right length and make sequential sense, using a helper function
+  # or quarter end (13). They happen a couple times per season, but ruin the
+  # the whole start/end sequnece within the game, so we can't rely on looking
+  # for 12/13 alone.
+  # We check by making sure start/end indices have right length and 
+  # make a valid sequence using a helper function
   period_start, period_end = get_period_start_end(pbp_g)
   
   # Now we find starters for each period
-  home_starters = []
-  away_starters = []
+  away_starter_list = []
+  home_starter_list = []
   for m in range(len(period_start)):
-    p_period = pbp_g.iloc[period_start[m]: period_end[m]]
+    pbp_period = pbp_g.iloc[period_start[m]: period_end[m]]
     # Note : Last condition drops weird "team rebound" entries
-    p_period = p_period[(p_period['PLAYER1_NAME']>0) & (p_period['EVENTMSGTYPE']<=11) & (p_period['PLAYER1_TEAM_ID']>0)]
+    pbp_period = pbp_period[(pbp_period['PLAYER1_NAME']>0) & (pbp_period['EVENTMSGTYPE']<=11) & (pbp_period['PLAYER1_TEAM_ID']>0)]
     
     # Who is subbed out before they are subbed in?
-    period_subs = p_period[p_period['EVENTMSGTYPE']==8]
+    period_subs = pbp_period[pbp_period['EVENTMSGTYPE']==8]
     
-    period_players = np.unique(np.union1d(np.union1d(p_period['PLAYER1_ID'].values, p_period['PLAYER2_ID'].values), 
-                                          p_period['PLAYER3_ID'].values))
+    period_players = np.unique(np.union1d(np.union1d(pbp_period['PLAYER1_ID'].values, pbp_period['PLAYER2_ID'].values), 
+                                          pbp_period['PLAYER3_ID'].values))
     # Drop player_id = 0
     period_players = np.delete(period_players, np.where(period_players==0)[0])
     # Drop Team IDs appearing in player ID list
@@ -139,9 +134,9 @@ def get_period_starters(gameid):
     period_players = np.delete(period_players, np.where(period_players>=1610000000)[0])
     # Drop any players where "persontype" = 7. Apparently, those are errors of some kind
     # Or placeholders
-    period_players = np.setdiff1d(period_players, p_period[p_period.PERSON1TYPE==7].PLAYER1_ID.values)
-    period_players = np.setdiff1d(period_players, p_period[p_period.PERSON2TYPE==7].PLAYER2_ID.values)
-    #period_players = np.setdiff1d(period_players, p_period[p_period.PERSON3TYPE==7].PLAYER3_ID.values)
+    period_players = np.setdiff1d(period_players, pbp_period[pbp_period.PERSON1TYPE==7].PLAYER1_ID.values)
+    period_players = np.setdiff1d(period_players, pbp_period[pbp_period.PERSON2TYPE==7].PLAYER2_ID.values)
+    #period_players = np.setdiff1d(period_players, pbp_period[pbp_period.PERSON3TYPE==7].PLAYER3_ID.values)
     
     # Now we have a list of players from the period
     # Who was subbed in/out and when?
@@ -159,106 +154,96 @@ def get_period_starters(gameid):
       except:
         0
     
-    # Players who started either never came out (p_neverout)
-    # or were subbed out *before* being subbed in again (if at all) (p_out)
-    p_neverout = player_subs[np.where(np.isinf(player_subs[:,1]) * np.isinf(player_subs[:,2]))[0], 0]
-    p_out = player_subs[np.where(player_subs[:,1]<player_subs[:,2])[0], 0]
-    period_starters = np.union1d(p_neverout, p_out)
-  
-    # Drop any extraneous players
-    # OR: TODO!: if too few players, fix with box score    
-    Nstarters = len(period_starters)
-    if Nstarters<10:
-      print 'Too few starters G=%s, Q=%d, N=%d' % (gameid,m+1,len(period_starters))
-      # CAN WE SOLVE THIS WITH BOX SCORE MINUTES???
-      # Somebody should have a quarter's worth of minutes
-    elif Nstarters>10:
-      print 'Too many starters G=%s, Q=%d, N=%d' % (gameid,m+1,len(period_starters))
-      # Try to drop extra(s)
-      # by picking who appears last in PBP order
-      
-      first_idx=[]
-      for pl in period_starters:
-        idx_pl = np.inf
-        try:
-          idx_pl = np.min([idx_pl, np.where(p_period['PLAYER1_ID']==pl)[0][0]])
-          idx_pl = np.min([idx_pl, np.where(p_period['PLAYER2_ID']==pl)[0][0]])
-          idx_pl = np.min([idx_pl, np.where(p_period['PLAYER3_ID']==pl)[0][0]])
-        except:
-          0
-        first_idx.append(idx_pl)
-      period_starters = period_starters[np.argsort(first_idx)[0:10]]
+    # Players who started either never came out (pl_neverout)
+    # or were subbed out *before* being subbed in again (if at all) (pl_out)
+    pl_neverout = player_subs[np.where(np.isinf(player_subs[:,1]) * np.isinf(player_subs[:,2]))[0], 0]
+    pl_out = player_subs[np.where(player_subs[:,1]<player_subs[:,2])[0], 0]
+    period_starters = np.union1d(pl_neverout, pl_out)
 
-    home_idx = []
-    away_idx = []
-    for n,plyr in enumerate(period_starters):
-      try:      
-        if home == p_period[p_period['PLAYER1_ID']==plyr].iloc[0]['PLAYER1_TEAM_ID']:
-          home_idx.append(n)
-        else:
-          away_idx.append(n)
-      except:
-        try:
-          if home == p_period[p_period['PLAYER2_ID']==plyr].iloc[0]['PLAYER2_TEAM_ID']:
-            home_idx.append(n)
-          else:
-            away_idx.append(n)
-        except:
-          try:
-            if home == p_period[p_period['PLAYER3_ID']==plyr].iloc[0]['PLAYER3_TEAM_ID']:
-              home_idx.append(n)
-            else:
-              away_idx.append(n)
-          except:
-            print 'Error', str(plyr)
+    is_away = np.array([p in away_team['PLAYER_ID'].values for p in period_starters], dtype=np.int)
+    away_starters = period_starters[np.where(is_away)[0]]
+
+    is_home = np.array([p in home_team['PLAYER_ID'].values for p in period_starters], dtype=np.int)
+    home_starters = period_starters[np.where(is_home)[0]]
     
-    # Fill in -1 if total number of players < 5 for home/away
-    home_players = period_starters[home_idx]
-    Nhome = len(home_players)
-    if Nhome<5:
-      home_players = np.hstack((home_players, [-1 for n in range(5-Nhome)]))
-    elif Nhome>5:
-      print 'Too many home starters'
-      home_players = home_players[0:5]
-    away_players = period_starters[away_idx]
-    Naway = len(away_players)
-    if Naway<5:
-      away_players = np.hstack((away_players, [-1 for n in range(5-Naway)]))
-    elif Naway>5:
-      print 'Too many away starters'
-      away_players = away_players[0:5]
+    Nstarters = len(period_starters)
+    Naway = len(away_starters)
+    Nhome = len(home_starters)
+    
+    # Drop any extraneous players
+    # OR: TODO!: if too few players, fix with box score
+    if Naway!=5 or Nhome!=5 or Nstarters!=10:
+      print gameid, m+1, 'Wrong number of starters:  ',Nstarters,Naway,Nhome
+      # Run problem-solver, which may use more data, such as box score        
+      # For now: Fill in -1 if total number of players < 5 for home/away        
+      if Naway<5:
+        print ' -- Too few (away)'
+        for n in range(5-Naway):
+          away_starters = np.append(away_starters, -1)
+      if Nhome<5:
+        print ' -- Too few (home)'
+        for n in range(5-Nhome):
+          home_starters = np.append(home_starters, -1)
+        
+        # TODO: CAN WE SOLVE THIS WITH BOX SCORE MINUTES???
+        # Somebody should have a quarter's worth of minutes
 
-    home_starters.append(home_players)
-    away_starters.append(away_players)
+
+      # Try to drop extra(s)
+      # by keeping who appears first in PBP order
+      # Basically, this assumes most likely error is a missing SUB event
+      if Naway>5:
+        print ' -- Too many (away)'
+        away_first_event = []
+        for pid in away_starters:
+          try:
+            idx = np.where(pbp_period['PLAYER1_ID']==pid)[0][0]
+          except:
+            try:
+              idx = np.where(pbp_period['PLAYER2_ID']==pid)[0][0]
+            except:
+              idx = np.where(pbp_period['PLAYER3_ID']==pid)[0][0]
+          away_first_event.append(idx)
+        away_starters = away_starters[np.argsort(away_first_event)[0:5]]
+
+      
+      if Nhome>5:
+        print ' -- Too many (home)'
+        home_first_event = []
+        for pid in home_starters:
+          try:
+            idx = np.where(pbp_period['PLAYER1_ID']==pid)[0][0]
+          except:
+            try:
+              idx = np.where(pbp_period['PLAYER2_ID']==pid)[0][0]
+            except:
+              idx = np.where(pbp_period['PLAYER3_ID']==pid)[0][0]
+          home_first_event.append(idx)
+        home_starters = home_starters[np.argsort(home_first_event)[0:5]]
+                
+    away_starter_list.append(away_starters)
+    home_starter_list.append(home_starters)
   
-  return home_starters, away_starters
+  return away_starter_list, home_starter_list
 
 #%
 def get_possessions(gameid):
   
-  try:
-    info_g = bb.get_boxscore_v2(gameid, box_type='summary')
-  except:
-    info_g = bb.get_boxscore(gameid)[2]
-
-  home = info_g['HOME_TEAM_ID'].values[0]
-  away = info_g['VISITOR_TEAM_ID'].values[0]
+  info_g = bb.get_info(gameid)
+  home,away = info_g[['HOME_TEAM_ID','VISITOR_TEAM_ID']]
 
   pbp_g = bb.get_pbp(gameid) # play-by-play
-  home_period_starters, away_period_starters = get_period_starters(gameid)
-  
-  home_score = 0
-  #home_score_prev = 0
-  away_score = 0
-  #away_score_prev = 0
-  # Some games (0029600002) don't have all quarter starts
-  # This helps
+  away_period_starters, home_period_starters = get_period_starters(pbp_g)
+
+  # Initialize variables  
   home_players = home_period_starters[0]
   away_players = away_period_starters[0]
   events = []
   period_remain_prev = 720.0
+  
   # Assign first possession based on who wins initial jump ball:
-  # If no jump ball exists, start with home on offense (doesn't matter)
+  # If no jump ball exists, start with home on offense
+  # Note : it doesn't matter because we will figure out based on next event anyway
   try:
     home_isoff = pbp_g[pbp_g['EVENTMSGTYPE']==10].iloc[0]['PLAYER3_TEAM_ID']==home
   except:
@@ -271,28 +256,73 @@ def get_possessions(gameid):
       scores[i+1,:] = [int(j) for j in s.split(' - ')]
     else:
       scores[i+1,:] = scores[i,:]
-  pbp_g['SCORECHANGE'] = np.hstack((0, np.diff(scores[:,0]) + np.diff(scores[:,1])))
-  
+  score_change = np.hstack((0, np.diff(scores[:,0]) + np.diff(scores[:,1])))
+
   # make a table of FT "sessions"
-  ft_sessions = pbp_g[pbp_g['EVENTMSGTYPE']==3][['PERIOD','PCTIMESTRING','PLAYER1_ID']].reset_index()
+  # Start with a list of all FTs
+  ft_list = pbp_g[pbp_g['EVENTMSGTYPE']==3][['PERIOD','PCTIMESTRING','PLAYER1_ID','HOMEDESCRIPTION','VISITORDESCRIPTION']].reset_index()
+  ft_list['SEC_REMAIN'] = [bb.nsec_elapsed(f['PERIOD'],f['PCTIMESTRING']) for i,f in ft_list.iterrows()]
   # Drop technical free throws from ft_sessions
-  ft_sessions = ft_sessions.iloc[np.where([(1-bool(re.search('Technical', str(pbp_g.iloc[i]['HOMEDESCRIPTION'])))) 
-  * (1-bool(re.search('Technical', str(pbp_g.iloc[i]['VISITORDESCRIPTION'])))) for i in ft_sessions['index']])[0]]
+  ft_list = ft_list.iloc[np.where([(1-bool(re.search('Technical', str(pbp_g.iloc[i]['HOMEDESCRIPTION'])))) 
+  * (1-bool(re.search('Technical', str(pbp_g.iloc[i]['VISITORDESCRIPTION'])))) for i in ft_list['index']])[0]]
+  ft_list['MISS'] = [int(bool(re.search('MISS', str(f['HOMEDESCRIPTION']) + str(f['VISITORDESCRIPTION'])))) for i,f in ft_list.iterrows()]
+  
+  # Then break up into "sessions"
+  time_objs = {(p['PERIOD'],p['SEC_REMAIN'],p['PCTIMESTRING']) for i,p in ft_list.iterrows()}
+  ft_sessions = pd.DataFrame()
+  ft_sessions['PERIOD']=[t[0] for t in time_objs]
+  ft_sessions['PCTIMESTRING']=[t[2] for t in time_objs]
+  ft_sessions['FTA'] = [len(ft_list[(ft_list['PERIOD']==t[0]) & (ft_list['PCTIMESTRING']==t[2])]) for t in time_objs]
+  ft_sessions['FTM'] = ft_sessions['FTA'] - [ft_list[(ft_list['PERIOD']==t[0]) & (ft_list['PCTIMESTRING']==t[2])]['MISS'].sum() for t in time_objs]
+  
+  # Mark missed shots that are follow by offensive rebounds
+  fg_miss = pbp_g[pbp_g['EVENTMSGTYPE']==2][['PERIOD','PCTIMESTRING','PLAYER1_TEAM_ID']].reset_index()
+  rebs = pbp_g[pbp_g['EVENTMSGTYPE']==4][['PERIOD','PCTIMESTRING','PLAYER1_ID','PLAYER1_TEAM_ID']]
+  # also fix team rebounds
+  
+  # Arrays to hold results  
+  Npbp = len(pbp_g)
+  fta = np.zeros(Npbp)
+  ftm = np.zeros(Npbp)
+  oreb = np.zeros(Npbp)
+  
+  # for each missed shot, mark whether shooting team matching rebounding team
+  reb_idx = 0
+  for i,f in fg_miss.iterrows():
+    t_miss = bb.nsec_elapsed(f['PERIOD'],f['PCTIMESTRING'])
+    while rebs.iloc[reb_idx]['PERIOD']<f['PERIOD']:
+      reb_idx += 1
+    while bb.nsec_elapsed(rebs.iloc[reb_idx]['PERIOD'], rebs.iloc[reb_idx]['PCTIMESTRING']) < t_miss:
+      reb_idx += 1
+    
+    if rebs.iloc[reb_idx]['PLAYER1_TEAM_ID']==f['PLAYER1_TEAM_ID'] or rebs.iloc[reb_idx]['PLAYER1_ID']==f['PLAYER1_TEAM_ID']:
+      oreb[f['index']] += 1
+  
+  pbp_g['OREB'] = oreb
+  fg_miss = pbp_g[pbp_g['EVENTMSGTYPE']==2][['PERIOD','PCTIMESTRING','OREB']]
+  # For each session:
+  # Attach each session to a made shot (event type = 1)
+  # OR a shooting foul (event type = 6)
+  for i,f in ft_sessions.iterrows():
+    if f['FTA']==1:
+      idx = np.where((pbp_g['PERIOD']==f['PERIOD']) & (pbp_g['PCTIMESTRING']==f['PCTIMESTRING']) & (pbp_g['EVENTMSGTYPE']==1))[0]
+    elif f['FTA']>=1:
+      idx = np.where((pbp_g['PERIOD']==f['PERIOD']) & (pbp_g['PCTIMESTRING']==f['PCTIMESTRING']) & (pbp_g['EVENTMSGTYPE']==6))[0]
+    fta[idx] = f['FTA']
+    ftm[idx] = f['FTM']
+    score_change[idx] += f['FTM']
+
+  pbp_g['FTA'] = fta
+  pbp_g['FTM'] = ftm
+  pbp_g['SCORE_CHANGE'] = score_change
 
   for i,p in pbp_g.iterrows():
     
-    # Play description, number, type
-    h = p['HOMEDESCRIPTION']
-    v = p['VISITORDESCRIPTION']
-    e_type = p['EVENTMSGTYPE']
-      
-    # Switch to handle different plays
+    # Switch to handle different play types
     # Shots (1/2/3), turnover (5) and foul (6)
     # inform who's on offense (home_isoff)
     # Substituion (8) changes players oncourt
     # Start of quarter (12) changes players on court
-    save_event = True
-    poss_type = 1 # 1 : most events, 2 : and-one, 3 : technical FT
     # 1 made shot
     # 2 missed shot
     # 3 free throw
@@ -306,46 +336,59 @@ def get_possessions(gameid):
     # 11 ejection
     # 12 start of quarter
     # 13 end of quarter
+    
+    h = p['HOMEDESCRIPTION']
+    v = p['VISITORDESCRIPTION']
+    e_type = p['EVENTMSGTYPE']
+    save_event = True
+    fga_pts = 0
+    
+    # Made shot
     if e_type==1:
+      poss_type = 1
       if h and (not v or re.search('Shot',h) or re.search('Layup',h) or re.search('Dunk',h)): home_isoff = True
       elif v and (not h or re.search('Shot',v) or re.search('Layup',v) or re.search('Dunk',v)): home_isoff = False
+      if home_isoff and h:
+        fga_pts = 2 + int(bool(re.search('3PT', h)))
+      elif v:
+        fga_pts = 2 + int(bool(re.search('3PT', v)))
+      else: # sometimes extraneous "made shots" with no description, etc
+        save_event = False
+        
+    # Missed shot
     elif e_type==2:
+      poss_type = 2
       if h and (not v or re.search('MISS',h)): home_isoff = True
       elif v and (not h or re.search('MISS',v)): home_isoff = False
-    elif e_type==3:
-      if h and (not v or re.search('Free Throw',h)): home_isoff = True
-      elif v and (not h or re.search('Free Throw',v)): home_isoff = False
+      # get fgav - field goal attempted value
+      if home_isoff:
+        fga_pts = 2 + int(bool(re.search('3PT', h)))
+      else:
+        fga_pts = 2 + int(bool(re.search('3PT', v)))
+      # Missed shot doesn't end poss if OREB
+      if p['OREB']: save_event = False
         
-      # If it's first free throw, save "session" as one event
-      # Also, if it's first and only free throw due to and-one -- tag poss_type
-      # also, if it's technical free throw -- tag poss_type
-      if (home_isoff and re.search('Free Throw 1', h)) or (not home_isoff and re.search('Free Throw 1', v)):
-        # Change event data here to reflect "session" as opposed to 1 FT
-        # idx = set of FTA associated with this session
-        idx = ft_sessions[(ft_sessions['PERIOD']==p['PERIOD']) & (ft_sessions['PCTIMESTRING']==p['PCTIMESTRING']) 
-                           & (ft_sessions['PLAYER1_ID']==p['PLAYER1_ID'])]['index'].values
-        num_fta = len(idx)
-        num_ft = np.sum(pbp_g['SCORECHANGE'].iloc[idx])
-        p['SCORECHANGE'] = num_ft
-        if home_isoff:
-          h = h.split('(')[0].replace('Free Throw 1 of %d' % num_fta, 'Free Throws, %d of %d' % (num_ft, num_fta))
-        else:
-          v = v.split('(')[0].replace('Free Throw 1 of %d' % num_fta, 'Free Throws, %d of %d' % (num_ft, num_fta))
-        # If it's an and-one note it
-        if num_fta==1:
-          poss_type = 2
-      # Don't save subsequent free throws
-      elif (home_isoff and re.search('Free Throw \d', h)) or (not home_isoff and re.search('Free Throw \d', v)):
-        save_event = False
-      # Save technical free throws, but add a tag so they don't count as possessions
-      elif (home_isoff and re.search('Technical Free Throw', h)) or (not home_isoff and re.search('Technical Free Throw', v)):
-        save_event = True
-        poss_type = 0
-        
+    # Turnover
     elif e_type==5:
+      poss_type = 5
       if h and (not v or re.search('Turnover',h)): home_isoff = True
       elif v and (not h or re.search('Turnover',v)): home_isoff = False
-    # SUB (8)
+    
+    # Foul 
+    elif e_type==6:
+      # Technical fouls : don't save
+      if (h and re.search('Technical',h)) or (v and re.search('Technical',v)):
+        save_event = False
+      # Personal foul without FTs or and-one : don't save
+      # Note: We don't save on and-one b/c it's already attached to made shot.
+      if p['FTA']<=1:
+        save_event = False
+      # Shooting/personal foul with FTs : save
+      elif p['FTA']>1:
+        poss_type = 3
+        fga_pts = p['FTA']
+      
+    # SUB
     elif e_type==8:
       save_event = False
       if h and (not v or re.search('SUB',h)):
@@ -360,82 +403,95 @@ def get_possessions(gameid):
           # UNLESS free throw
         except:
           print 'Error in away SUB', i
-    elif e_type==10: # Jump ball
+    
+    # Jump ball
+    elif e_type==10:
       home_isoff = bool(p['PLAYER3_TEAM_ID']==home)
       save_event = False
+      
     # START OF QUARTER (12)
     elif e_type==12:
       home_players = home_period_starters[p['PERIOD']-1]
       away_players = away_period_starters[p['PERIOD']-1]
       period_remain_prev = bb.clock2float(p['PCTIMESTRING'])*60.0
       save_event = False
+    
+    # End of quarter
     elif e_type==13:
       save_event = False
+      if p['PERIOD']<4:
+        period_remain_prev = 720
+      else:
+        period_remain_prev = 300
+    # Others
     else:
       save_event = False
       
     # Catch weird / out-of-order plays
-    if p['SCORECHANGE']<0 or p['SCORECHANGE']>=4: 
+    if p['SCORE_CHANGE']<0 or p['SCORE_CHANGE']>=5:
       save_event = False
       
     if save_event:
-      period_remain = bb.clock2float(p['PCTIMESTRING'])*60.0
+      period_remain = np.round(bb.clock2float(p['PCTIMESTRING'])*60.0, 2)
+      if period_remain_prev<30 and period_remain>300:
+        if p['PERIOD']<=4:
+          period_remain_prev = 720
+        else:
+          period_remain_prev = 300
       duration = period_remain_prev - period_remain
       period_remain_prev = period_remain
+      nsec_elapsed = bb.nsec_elapsed(p['PERIOD'], p['PCTIMESTRING'])
       # Save event details  
       event_p = {}
-      event_p['SEASONID'] = gameid[:5] # SEASONID
-      event_p['GAMEID'] = gameid # GAMEID
+      event_p['SEASON_ID'] = gameid[:5] # SEASONID
+      event_p['GAME_ID'] = gameid # GAMEID
       event_p['PERIOD'] = int(p['PERIOD']) # PERIOD
-      event_p['PERIODREMAIN'] = period_remain
+      event_p['PERIOD_REMAIN'] = period_remain
+      event_p['SEC_ELAPSED'] = nsec_elapsed
       event_p['DURATION'] = duration
-      event_p['EVENTTYPE'] = p['EVENTMSGTYPE'] # EVENTTYPE
-      event_p['SCORECHANGE'] = int(p['SCORECHANGE'])
-      event_p['POSSTYPE'] = int(poss_type)
-      
-      # if there's a score, update
-      if p['SCORE']:
-        away_score,home_score = [int(j) for j in p['SCORE'].split('-')]
+      event_p['SCORE_CHANGE'] = int(p['SCORE_CHANGE'])
+      event_p['POSS_TYPE'] = int(poss_type)
+      event_p['FTA'] = int(p['FTA'])
+      event_p['FTM'] = int(p['FTM'])
+      event_p['FGA_PTS'] = int(fga_pts)
   
       if home_isoff:
-        #off_score = home_score
-        #def_score = away_score
-        event_p['OFFTEAM'] = home
-        event_p['DEFTEAM'] = away
-        event_p['OFFPLAYERS'] = home_players.astype('int').tolist()
-        event_p['DEFPLAYERS'] = away_players.astype('int').tolist()
-        #event_p['SCORECHANGE'] = int(home_score - home_score_prev)
+        event_p['OFF_TEAM'] = home
+        event_p['DEF_TEAM'] = away
+        event_p['OFF_PLAYERS'] = home_players.astype('int').tolist()
+        event_p['DEF_PLAYERS'] = away_players.astype('int').tolist()
       else:
-        #off_score = away_score
-        #def_score = home_score
-        event_p['OFFTEAM'] = away
-        event_p['DEFTEAM'] = home
-        event_p['OFFPLAYERS'] = away_players.astype('int').tolist()
-        event_p['DEFPLAYERS'] = home_players.astype('int').tolist()
-        #event_p['SCORECHANGE'] = int(away_score - away_score_prev)
+        event_p['OFF_TEAM'] = away
+        event_p['DEF_TEAM'] = home
+        event_p['OFF_PLAYERS'] = away_players.astype('int').tolist()
+        event_p['DEF_PLAYERS'] = home_players.astype('int').tolist()
             
-      if home_isoff:
-        event_p['DESCRIPTION'] = h
+      # If not a foul, take description from offensive team
+      if e_type != 6:
+        if home_isoff:
+          event_p['DESCRIPTION'] = h
+        else:
+          event_p['DESCRIPTION'] = v
+        event_p['OFF_PLAYER'] = p['PLAYER1_ID']
+      # If a foul, write free throw caption
       else:
-        event_p['DESCRIPTION'] = v
-      #event_p['OFFSCORE'] = off_score
-      #event_p['DEFSCORE'] = def_score
-      
+        event_p['DESCRIPTION'] = '%s Free Throws, %d of %d' % (p['PLAYER2_NAME'], p['FTM'], p['FTA'])
+        event_p['OFF_PLAYER'] = p['PLAYER2_ID']
+  
       # write
       events.append(event_p)
-      #away_score_prev = away_score
-      #home_score_prev = home_score
-  
+
   return events
 
-#% Main loop
+#%% Main loop
 
 def main():
 
   games = pd.read_csv(bb.REPOHOME + '/data/csv/games_96-15.csv')
-  #games = games[(games['SEASON_ID']>=212) & (games['SEASON_ID']<213)]
+#  games = games[(games['SEASON_ID']<=212) | (games['SEASON_ID']>250)]
+  games = games[(games['SEASON_ID']>=212) & (games['SEASON_ID']<213)]
   #games = games[(games['SEASON_ID']>=213) & (games['SEASON_ID']<214)]
-  games = games[(games['SEASON_ID']>=214) & (games['SEASON_ID']<215)]
+  #games = games[(games['SEASON_ID']>=214) & (games['SEASON_ID']<215)]
   #games = games[(games['SEASON_ID']>=215) & (games['SEASON_ID']<216)]
   #games = pd.read_csv(bb.REPOHOME + '/data/csv/games2016.csv')
   istart = 0

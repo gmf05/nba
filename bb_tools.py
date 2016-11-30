@@ -153,7 +153,7 @@ def nsec_elapsed(period, pctime_str):
   else: # overtime : 300 sec per quarter
     pctime_sec = (4-nmin)*60 + 60 - nsec
     return 2880 + (period-5)*300 + pctime_sec
-  
+
 def nsec_total(Nperiods):
   if Nperiods<4:
     print 'WARNING: Less than four periods found...'
@@ -166,8 +166,8 @@ def nsec_total(Nperiods):
 def nsec_total_gameid(gameid):
   return nsec_total(get_pbp(gameid).iloc[-1].PERIOD)
   
-def nsec_remain_qtr(p):
-  nmin,nsec = str(p.PCTIMESTRING).split(':')
+def nsec_remain_period(pctime_str):
+  nmin,nsec = pctime_str.split(':')
   return int(nmin)*60 + int(nsec)
 
 def zip2(keys,vals):
@@ -179,7 +179,14 @@ def zip2(keys,vals):
 # Simple version. Image based
 def draw_court(axis=[0,100,0,50]): 
   #fig = plt.figure(figsize=(15,7.5))
-  img = mpimg.imread(REPOHOME + '/image/nba_court_T.png')
+  #img = mpimg.imread(REPOHOME + '/image/nba_court_T.png')
+  img = mpimg.imread(REPOHOME + '/court1.png')
+  plt.imshow(img,extent=axis, zorder=0)
+
+def draw_court_T(axis=[-250,250,-50,990]): 
+  #fig = plt.figure(figsize=(15,7.5))
+  #img = mpimg.imread(REPOHOME + '/image/nba_court.png')
+  img = mpimg.imread(REPOHOME + '/court1_T.png')
   plt.imshow(img,extent=axis, zorder=0)
   
 ## END PLOTTING FUNCTIONS
@@ -220,6 +227,16 @@ def get_team_roster(teamid,season=default_season):
   j = requests.get('http://stats.nba.com/stats/commonteamroster', params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
   
+def get_teams_gameid(gameid):
+  try:
+    B = get_boxscore_v2(gameid, box_type='traditional')
+  except:
+    B = get_boxscore(gameid)[4]    
+
+  info_g = get_info(gameid)
+  away, home = info_g[['VISITOR_TEAM_ID','HOME_TEAM_ID']]
+  return B[B['TEAM_ID']==away], B[B['TEAM_ID']==home]
+    
 def get_team_info(teamid,season=default_season):
   p = stats_params.copy()
   p['TeamID'] = teamid
@@ -255,10 +272,13 @@ def get_player_info(playerid):
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_player_career(playerid):
-  p = stats_params.copy()
-  p['PlayerID']=str(playerid)
-  j = requests.get('http://stats.nba.com/stats/playercareerstats', params=p, headers=user_agent).json()['resultSets'][0]
-  return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
+  #try:
+  #  0
+  #except:
+    p = stats_params.copy()
+    p['PlayerID']=str(playerid)
+    j = requests.get('http://stats.nba.com/stats/playercareerstats', params=p, headers=user_agent).json()['resultSets'][0]
+    return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
 
 def get_player_gamelog(playerid,season=default_season):
   p = stats_params.copy()
@@ -302,6 +322,12 @@ def get_boxscore_v2(gameid, box_type='summary'):
     #box_types = ['summary','traditional','scoring', 'fourfactors','advanced','playertrack','usage','misc']
     J = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=J['rowSet'], columns=J['headers'])
+
+def get_info(gameid):
+  try:
+    return get_boxscore_v2(gameid, box_type='summary').iloc[0]
+  except:
+    return get_boxscore(gameid)[2].iloc[0]
 
 def get_pbp(gameid):
   try:
@@ -355,7 +381,6 @@ def get_combine_results(query_name, season=default_season):
   p['Season'] = season
   j = requests.get('http://stats.nba.com/stats/draftcombine%s' % query_name, params=p, headers=user_agent).json()['resultSets'][0]
   return pd.DataFrame(data=j['rowSet'],columns=j['headers'])
-
 
 ## Sports Illustrated play-by-play:
 def get_si_pbp(gameid):
@@ -624,7 +649,7 @@ def write_game_json(gameid, do_sportvu=False):
   
   #for box_type in box_types:
   box_type = 'summary'
-  print 'Game %s, box score (%s)' % (box_type, gameid)
+  print 'Game %s, box score (%s)' % (gameid, box_type)
   with open('%s/json/boxv2_%s_%s.json' % (DATAHOME, box_type, gameid), 'w') as f:
     box = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
     json.dump( box, f)
@@ -632,13 +657,13 @@ def write_game_json(gameid, do_sportvu=False):
   box_type = 'traditional'
   #box_type = 'advanced'
   #box_type = 'playertrack'
-  print 'Game %s, box score (%s)' % (box_type, gameid)
+  print 'Game %s, box score (%s)' % (gameid, box_type)
   with open('%s/json/boxv2_%s_%s.json' % (DATAHOME, box_type, gameid), 'w') as f:
     box = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
     json.dump( box, f)
     
   box_type = 'playertrack'
-  print 'Game %s, box score (%s)' % (box_type, gameid)
+  print 'Game %s, box score (%s)' % (gameid, box_type)
   with open('%s/json/boxv2_%s_%s.json' % (DATAHOME, box_type, gameid), 'w') as f:
     box = requests.get('http://stats.nba.com/stats/boxscore%sv2' % box_type, params=p, headers=user_agent).json()['resultSets'][0]
     json.dump( box, f)

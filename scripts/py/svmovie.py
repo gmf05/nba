@@ -5,7 +5,7 @@ Created on Sat Mar  5 12:37:22 2016
 @author: gmf
 """
 
-#%%
+#%
 
 import numpy as np
 #import scipy.io as spio
@@ -31,7 +31,7 @@ def init():
   ax.axis('off')
   dx = 5
   plt.xlim([xmin-dx,xmax+dx]) 
-  plt.ylim([ymin-dx,ymax+dx])  
+  plt.ylim([ymin-dx,ymax+dx])
   plt.title(play_description)
   return tuple(info_text) + tuple(player_text) + tuple(player_circ) + (ball_circ,)
 
@@ -58,13 +58,13 @@ def animate(n):
   info_text[2].set_text(str(sv.iloc[n].shotclock_remain))
   #
   plt.show()
-  #plt.pause(0.01) # Uncomment to watch movie as it's being made
+  plt.pause(0.01) # Uncomment to watch movie as it's being made
   return tuple(info_text) + tuple(player_text) + tuple(player_circ) + (ball_circ,)
 
 # Plotting players & ball as 2D movie!
 
 # Event number
-eventnum = '0003'
+eventnum = '0391'
 filename = 'sportvu_movie'
 
 # Get SportVu data & downsample
@@ -84,12 +84,8 @@ ymax = 50
 
 # Play-by-Play data for given event num
 # TO DO: DON'T GET INDEX I -- GET CLOSEST TO CURRENT TIME!!
-playi = pbp.iloc[np.flatnonzero(pbp.EVENTNUM==int(eventnum))]
-#treb = playi.PCTIMESTRING.values[0]
-if playi.HOMEDESCRIPTION.values[0]:
-  play_description = str(playi.HOMEDESCRIPTION.values[0])
-else:
-  play_description = str(playi.VISITORDESCRIPTION.values[0])
+playi = pbp[pbp['EVENTNUM']==int(eventnum)].iloc[0]
+play_description = bb.get_play_desc(playi)
 
 # Animated elements
 info_text = range(3)
@@ -109,6 +105,6 @@ for i in range(10):
 ball_circ = plt.Circle((0,0), R, color=[1, 0.4, 0])
 
 # #%% Play animation!
-
 ani = animation.FuncAnimation(fig, animate, frames=len(sv), init_func=init, blit=True, interval=5, repeat=False)
-ani.save(filename + '.mp4', fps=10, extra_args=['-vcodec', 'libx264'])
+#ani.save(filename + '.mp4', fps=10, extra_args=['-vcodec', 'libx264'])
+  

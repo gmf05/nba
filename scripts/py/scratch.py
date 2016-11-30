@@ -1,88 +1,72 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 12 20:41:10 2015
-
-@author: gmf
-"""
-
+#%%
 import numpy as np
+import bb_tools as bb
+
+# DB
+from pymongo import MongoClient
+client = MongoClient('localhost', 27117)
+db = client['nba']
+events_db = db['possessions']
+
+teams = bb.get_teams_current()
+
+for n in range(30):
+  t = teams.iloc[n]
+  teamid = t['TEAM_ID']
+    
+  off_poss = events_db.find({'OFF_TEAM':teamid})
+  def_poss = events_db.find({'DEF_TEAM':teamid})
+  
+  pts_scored = 0
+  o_poss = 0
+  for o in off_poss:
+    o_poss+=1
+    pts_scored += o['SCORE_CHANGE']
+  
+  pts_against = 0
+  d_poss = 0
+  for d in def_poss:
+    d_poss+=1
+    pts_against += d['SCORE_CHANGE']
+    
+  ortg = np.round(1.0*pts_scored / o_poss * 100, 1)
+  drtg = np.round(1.0*pts_against / d_poss * 100, 1)
+
+  poss = events_db.find({'OFF_TEAM':teamid})
+  team_games = np.unique([o['GAME_ID'] for o in poss])  
+  pace = np.zeros(len(team_games))  
+  for n in range(len(team_games)):
+    gameid = team_games[n]
+    poss_n = events_db.find({'$and': [{'GAME_ID':gameid},{'OFF_TEAM':teamid}]})
+    pace[n] = poss_n.count() * 2880.0 / bb.nsec_total_gameid(gameid)
+  np.mean(pace)  
+  
+  print t['TEAM_CITY'],ortg,drtg,np.round(np.mean(pace),1)
+  
+
+#%% Benchmark SQL query for games against searching box scores
+
+import psycopg2
+import datetime
 import pandas as pd
-import json
-import re
+#import bb_tools as bb
 
-def get_boxscore(gameid):
-  J = json.load( open( '%s/json/bs_%s.json' % (DATAPATH,gameid), 'r' ) )
-  return [pd.DataFrame(data=j['rowSet'],columns=j['headers']) for j in J]
+conn = psycopg2.connect("user='postgres' password='docker' host='localhost'")
 
-def get_pbp(gameid):
-  J = json.load( open( '%s/json/pbp_%s.json' % (DATAPATH,gameid), 'r' ) )
-  return pd.DataFrame(data=J['rowSet'],columns=J['headers'])
+# Make list of game dates
+# Should we attach as date data type to rows??
+cur = conn.cursor()
+cur.execute("SELECT game_code FROM nbaGames g where g.SEASON_ID=296")
+G = cur.fetchall()
+game_dates = [datetime.date(int(g[0][0:4]), int(g[0][4:6]), int(g[0][6:8])) for g in G]
 
-def get_shots(gameid):
-  J = json.load( open( '%s/json/shots_%s.json' % (DATAPATH,gameid), 'r' ) )
-  return pd.DataFrame(data=J['rowSet'],columns=J['headers'])
-
-def get_reb_eventnum(gameid):
-  pbp = get_pbp(gameid)
-  homereb = []
-  awayreb = []
-  for i,p in pbp.iterrows():
-    if p.HOMEDESCRIPTION and re.search('REBOUND', p.HOMEDESCRIPTION):
-      homereb.append(p)
-    if p.VISITORDESCRIPTION and re.search('REBOUND', p.VISITORDESCRIPTION):
-      awayreb.append(p)
-  i0 = [a.EVENTNUM for a in homereb]
-  i1 = [a.EVENTNUM for a in awayreb]
-  #i2 = np.union1d(i0,i1)
-  return i0,i1
-
-def compute_sec_elapsed(period, pctime_str):
-  nmin,nsec = pctime_str.split(':')
-  nmin = int(nmin)
-  nsec = int(nsec)
-  if period<5:
-    pctime_sec = (11-nmin)*60 + 60 - nsec
-    t = (period-1)*720 + pctime_sec
-  else:
-    pctime_sec = (4-nmin)*60 + 60 - nsec
-    t = 2880 + (period-5)*300 + pctime_sec
-  return t
-
-def get_reb_pp(gameid):
-  pbp = get_pbp(gameid)
-  #
-  # TO DO: DEAL WITH OT!!    
-  dn1 = np.zeros(2880)
-  dn2 = np.zeros(2880)
-  #
-  for i,p in pbp.iterrows():
-    if p.VISITORDESCRIPTION and re.search('REBOUND', p.VISITORDESCRIPTION):
-      t = compute_sec_elapsed(pbp.iloc[i]['PERIOD'], pbp.iloc[i]['PCTIMESTRING'])
-      dn1[t] = 1
-    if p.HOMEDESCRIPTION and re.search('REBOUND', p.HOMEDESCRIPTION):
-      t = compute_sec_elapsed(pbp.iloc[i]['PERIOD'], pbp.iloc[i]['PCTIMESTRING'])
-      dn2[t] = 1
-  return dn1,dn2
-
-DATAPATH = '/home/gmf/unsynced/nba/data'
-gameid = '0021400001'
-reb1,reb2 = get_reb_pp(gameid)
-dn = np.vstack((reb1,reb2))
-time = np.arange(0,2880)
-d = pp.data(dn, time)
-
-
-#
-p = pp.params()
-T_knots = np.arange(0, 1+ep, 1)
-#T_knots = np.arange(0, 1+ep, 0.33333)
-p.add_covar('Rate', -1, T_knots, 'indicator')
-#p.add_covar('Rate', -1, T_knots, 'spline')
-
-# Self history / Rhythms
-Q_knots = np.array([1, 10, 20, 30, 50, 100])
-Q_knots[0] = 1
-p.add_covar('Self-History', response, Q_knots, 'spline')
-
-m = pp.model()
-m = m.fit(d, p)
+# 
+cur = conn.cursor()
+# First get table structure (field names)
+cur.execute("SELECT * FROM nbaPlayerSeasonTotals g where g.PLAYER_ID=1886;") 
+#cur.execute("SELECT * FROM nbaPlayerSeasonTotals g where g.PLAYER_ID=1886;")
+columns = ['player_id', 'season_id', 'age', 'gp', 'gs', 'min', 'fgm', 'fga', 'fg_pct',
+           'fg3m', 'fg3a', 'fg3_pct', 'ftm', 'fta', 'ft_pct', 'oreb', 'dreb', 'reb',
+           'ast', 'stl', 'blk', 'tov', 'pf', 'pts']
+data = cur.fetchall()
+df = pd.DataFrame(data=data, columns=columns)
